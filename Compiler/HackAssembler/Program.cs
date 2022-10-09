@@ -80,8 +80,8 @@ var compComponents = new Dictionary<string, string>
     { "M-D", "1000111" },
     { "D&A", "0000000" },
     { "D&M", "1000000" },
-    { "D|A", "0101010" },
-    { "D|M", "1101010" }
+    { "D|A", "0010101" },
+    { "D|M", "1010101" }
 };
 
 var destComponents = new Dictionary<string, string>
