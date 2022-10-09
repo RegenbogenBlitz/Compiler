@@ -85,8 +85,8 @@ async Task WriteErrorAsync(int inputLineNumber, string originalLine, string mess
 
 var labels = new Dictionary<string, int>();
 var output = new List<string>();
-var outputLineNumber = 0;
-var inputLineNumber = 0;
+var outputInstructionNumber = 0;
+var inputLineNumber = 1;
 foreach (var line in fileLines)
 {
     var trimmedLine = line.Trim();
@@ -122,7 +122,7 @@ foreach (var line in fileLines)
             throw new NotImplementedException();
         }
 
-        outputLineNumber++;
+        outputInstructionNumber++;
         inputLineNumber++;
     }
     else if (trimmedLine.StartsWith("("))
@@ -134,7 +134,7 @@ foreach (var line in fileLines)
             return ;
         }
 
-        labels.Add(label, outputLineNumber + 1);
+        labels.Add(label, outputInstructionNumber + 1);
         inputLineNumber++;
     }
     else
@@ -192,7 +192,7 @@ foreach (var line in fileLines)
 
         output.Add(outputLine);
         
-        outputLineNumber++;
+        outputInstructionNumber++;
         inputLineNumber++;
     }
 }
