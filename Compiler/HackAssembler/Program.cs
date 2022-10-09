@@ -21,49 +21,60 @@ if (assemblerDirectory == null)
 
 var fileLines = await File.ReadAllLinesAsync(path);
 
-var filteredAndTrimmedFileLines = 
-    fileLines
-    .Where(line => 
-        !string.IsNullOrWhiteSpace(line) && 
-        !line.StartsWith("//"))
-    .Select(line=> line.Trim());
-
 const int baseRamAddress = 16;
+
+async Task WriteErrorAsync(int inputLineNumber, string originalLine, string message)
+{
+    await Console.Error.WriteLineAsync($"Line {inputLineNumber}: '{originalLine}': {message}");
+}
 
 var output = new List<string>();
 var labels = new Dictionary<string, int>();
-var lineNumber = 0;
-foreach (var line in filteredAndTrimmedFileLines)
+var outputLineNumber = 0;
+var inputLineNumber = 0;
+foreach (var line in fileLines)
 {
-    if (line.StartsWith("@"))
+    var trimmedLine = line.Trim();
+    if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("//"))
+    {
+        inputLineNumber++;
+        continue;
+    }
+
+    if (trimmedLine.StartsWith("@"))
     {
         // A-instruction
         output.Add(line);
-        lineNumber++;
+        outputLineNumber++;
+        inputLineNumber++;
     }
-    else if (line.Contains('='))
+    else if (trimmedLine.Contains('='))
     {
         // C-instruction
         output.Add(line);
-        lineNumber++;
+        outputLineNumber++;
+        inputLineNumber++;
     }
-    else if (line.StartsWith("("))
+    else if (trimmedLine.StartsWith("("))
     {
-        var label = line.TrimStart('(').TrimEnd(')');
+        var label = trimmedLine.TrimStart('(').TrimEnd(')');
         if (labels.ContainsKey(label))
         {
-            await Console.Error.WriteLineAsync($"Label {label} has been used more than once.");
+            await WriteErrorAsync(inputLineNumber, line, "Label has been used more than once.");
             return ;
         }
 
-        labels.Add(label, lineNumber + 1);
+        labels.Add(label, outputLineNumber + 1);
+        inputLineNumber++;
     }
     else
     {
-        await Console.Error.WriteLineAsync($"Instruction {line} not recognised.");
+        await WriteErrorAsync(inputLineNumber, line, "Instruction not recognised.");
         return;
     }
 }
 
 var outputFileInfo = new FileInfo(Path.Join(assemblerDirectory.FullName, Path.GetFileNameWithoutExtension(path) + ".hack"));
 File.WriteAllLines(outputFileInfo.FullName, output);
+
+Console.Write(outputFileInfo.FullName);
