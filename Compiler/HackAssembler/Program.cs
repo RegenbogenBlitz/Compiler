@@ -113,6 +113,23 @@ async Task WriteErrorAsync(int inputLineNumber, string originalLine, string mess
     await Console.Error.WriteLineAsync($"Line {inputLineNumber}: '{originalLine}': {message}");
 }
 
+string TrimLine(string line)
+{
+    if (line.Contains("//"))
+    {
+        var commentStart = line.IndexOf("//", StringComparison.OrdinalIgnoreCase);
+        var trimmedLine = commentStart == 0
+            ? ""
+            : line.Substring(0, commentStart).Trim();
+        return trimmedLine;
+    }
+    else
+    {
+        return line.Trim();
+    }
+}
+
+
 var labels = new Dictionary<string, int>();
 var output = new List<string>();
 var nextOutputInstructionNumber = 0;
@@ -120,8 +137,8 @@ var inputLineNumber = 1;
 
 foreach (var line in fileLines)
 {
-    var trimmedLine = line.Trim();
-    if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("//"))
+    var trimmedLine = TrimLine(line);
+    if (string.IsNullOrWhiteSpace(trimmedLine))
     {
         inputLineNumber++;
     }
@@ -145,11 +162,11 @@ foreach (var line in fileLines)
 
 foreach (var line in fileLines)
 {
-    var trimmedLine = line.Trim();
-    if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("//"))
+    var trimmedLine = TrimLine(line);
+    if (string.IsNullOrWhiteSpace(trimmedLine))
     {
         inputLineNumber++;
-    } 
+    }
     else if (trimmedLine.StartsWith("("))
     {
         // Already processed
