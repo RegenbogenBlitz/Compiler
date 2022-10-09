@@ -28,8 +28,8 @@ async Task WriteErrorAsync(int inputLineNumber, string originalLine, string mess
     await Console.Error.WriteLineAsync($"Line {inputLineNumber}: '{originalLine}': {message}");
 }
 
-var output = new List<string>();
 var labels = new Dictionary<string, int>();
+var output = new List<string>();
 var outputLineNumber = 0;
 var inputLineNumber = 0;
 foreach (var line in fileLines)
@@ -44,7 +44,29 @@ foreach (var line in fileLines)
     if (trimmedLine.StartsWith("@"))
     {
         // A-instruction
-        output.Add(line);
+        var value = trimmedLine.TrimStart('@');
+        
+        if (uint.TryParse(value, out var uintValue))
+        {
+            if (uintValue > 32767)
+            {
+                await WriteErrorAsync(inputLineNumber, line, "Value is greater than 32767");
+                return;
+            }
+            
+            var binaryValue = Convert.ToString(uintValue, 2).PadLeft(16, '0');
+            output.Add(binaryValue);
+        }
+        else if (decimal.TryParse(value, out var decimalValue))
+        {
+            await WriteErrorAsync(inputLineNumber, line, "Numerical value is not an integer between 0 and 32767 inc.");
+            return;
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
+
         outputLineNumber++;
         inputLineNumber++;
     }
