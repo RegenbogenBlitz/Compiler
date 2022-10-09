@@ -21,7 +21,37 @@ if (assemblerDirectory == null)
 
 var fileLines = await File.ReadAllLinesAsync(path);
 
+
+var predefinedSymbols = new Dictionary<string, int>
+{
+    { "SP", 0 },
+    { "LCL", 1 },
+    { "ARG", 2 },
+    { "THIS", 3 },
+    { "THAT", 4 },
+    { "R0", 0 },
+    { "R1", 1 },
+    { "R2", 2 },
+    { "R3", 3 },
+    { "R4", 4 },
+    { "R5", 5 },
+    { "R6", 6 },
+    { "R7", 7 },
+    { "R8", 8 },
+    { "R9", 9 },
+    { "R10", 10 },
+    { "R11", 11 },
+    { "R12", 12 },
+    { "R13", 13 },
+    { "R14", 14 },
+    { "R15", 15 },
+    { "SCREEN", 16384 },
+    { "KBD", 24576 }
+};
+
 const int baseRamAddress = 16;
+var varSymbols = new Dictionary<string, int>();
+
 var compComponents = new Dictionary<string, string>
 {
     { "0", "0101010" },
@@ -85,18 +115,46 @@ async Task WriteErrorAsync(int inputLineNumber, string originalLine, string mess
 
 var labels = new Dictionary<string, int>();
 var output = new List<string>();
-var outputInstructionNumber = 0;
+var nextOutputInstructionNumber = 0;
 var inputLineNumber = 1;
+
 foreach (var line in fileLines)
 {
     var trimmedLine = line.Trim();
     if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("//"))
     {
         inputLineNumber++;
-        continue;
     }
+    else if (trimmedLine.StartsWith("("))
+    {
+        var label = trimmedLine.TrimStart('(').TrimEnd(')');
+        if (labels.ContainsKey(label))
+        {
+            await WriteErrorAsync(inputLineNumber, line, "Label has been used more than once.");
+            return ;
+        }
 
-    if (trimmedLine.StartsWith("@"))
+        labels.Add(label, nextOutputInstructionNumber);
+        inputLineNumber++;
+    }
+    else
+    {
+        nextOutputInstructionNumber++;
+    }
+}
+
+foreach (var line in fileLines)
+{
+    var trimmedLine = line.Trim();
+    if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("//"))
+    {
+        inputLineNumber++;
+    } 
+    else if (trimmedLine.StartsWith("("))
+    {
+        // Already processed
+    }
+    else if (trimmedLine.StartsWith("@"))
     {
         // A-instruction
         var value = trimmedLine.TrimStart('@');
@@ -112,29 +170,41 @@ foreach (var line in fileLines)
             var binaryValue = Convert.ToString(uintValue, 2).PadLeft(16, '0');
             output.Add(binaryValue);
         }
-        else if (decimal.TryParse(value, out var decimalValue))
+        else if (decimal.TryParse(value, out var _))
         {
             await WriteErrorAsync(inputLineNumber, line, "Numerical value is not an integer between 0 and 32767 inc.");
             return;
         }
+        else if(predefinedSymbols.ContainsKey(value))
+        {
+            var binaryValue = Convert.ToString(predefinedSymbols[value], 2).PadLeft(16, '0');
+            output.Add(binaryValue);
+        }
+        else if(labels.ContainsKey(value))
+        {
+            var binaryValue = Convert.ToString(labels[value], 2).PadLeft(16, '0');
+            output.Add(binaryValue);
+        }
         else
         {
-            throw new NotImplementedException();
+            if (!varSymbols.ContainsKey(value))
+            {
+                if (varSymbols.Count == 0)
+                {
+                    varSymbols.Add(value, baseRamAddress);
+                }
+                else
+                {
+                    var maxValue = varSymbols.Values.Max(v=>v);
+                    varSymbols.Add(value, maxValue +1);
+                }
+            }
+            
+            var binaryValue = Convert.ToString(varSymbols[value], 2).PadLeft(16, '0');
+            output.Add(binaryValue);
         }
 
-        outputInstructionNumber++;
-        inputLineNumber++;
-    }
-    else if (trimmedLine.StartsWith("("))
-    {
-        var label = trimmedLine.TrimStart('(').TrimEnd(')');
-        if (labels.ContainsKey(label))
-        {
-            await WriteErrorAsync(inputLineNumber, line, "Label has been used more than once.");
-            return ;
-        }
-
-        labels.Add(label, outputInstructionNumber + 1);
+        nextOutputInstructionNumber++;
         inputLineNumber++;
     }
     else
@@ -192,7 +262,7 @@ foreach (var line in fileLines)
 
         output.Add(outputLine);
         
-        outputInstructionNumber++;
+        nextOutputInstructionNumber++;
         inputLineNumber++;
     }
 }
