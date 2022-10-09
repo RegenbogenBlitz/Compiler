@@ -22,6 +22,61 @@ if (assemblerDirectory == null)
 var fileLines = await File.ReadAllLinesAsync(path);
 
 const int baseRamAddress = 16;
+var compComponents = new Dictionary<string, string>
+{
+    { "0", "0101010" },
+    { "1", "0111111" },
+    { "-1", "0111010" },
+    { "D", "0001100" },
+    { "A", "0110000" },
+    { "M", "1110000" },
+    { "!D", "0001101" },
+    { "!A", "0110001" },
+    { "!M", "1110001" },
+    { "-D", "0001111" },
+    { "-A", "0110011" },
+    { "-M", "1110011" },
+    { "D+1", "0011111" },
+    { "A+1", "0110111" },
+    { "M+1", "1110111" },
+    { "D-1", "0001110" },
+    { "A-1", "0110010" },
+    { "M-1", "1110010" },
+    { "D+A", "0000010" },
+    { "D+M", "1000010" },
+    { "D-A", "0010011" },
+    { "D-M", "1010011" },
+    { "A-D", "0000111" },
+    { "M-D", "1000111" },
+    { "D&A", "0000000" },
+    { "D&M", "1000000" },
+    { "D|A", "0101010" },
+    { "D|M", "1101010" }
+};
+
+var destComponents = new Dictionary<string, string>
+{
+    { "", "000" },
+    { "M", "001" },
+    { "D", "010" },
+    { "MD", "011" },
+    { "A", "100" },
+    { "AM", "101" },
+    { "AD", "110" },
+    { "AMD", "111" }
+};
+
+var jumpComponents = new Dictionary<string, string>
+{
+    { "", "000" },
+    { "JGT", "001" },
+    { "JEQ", "010" },
+    { "JGE", "011" },
+    { "JLT", "100" },
+    { "JNE", "101" },
+    { "JLE", "110" },
+    { "JMP", "111" }
+};
 
 async Task WriteErrorAsync(int inputLineNumber, string originalLine, string message)
 {
@@ -70,13 +125,6 @@ foreach (var line in fileLines)
         outputLineNumber++;
         inputLineNumber++;
     }
-    else if (trimmedLine.Contains('='))
-    {
-        // C-instruction
-        output.Add(line);
-        outputLineNumber++;
-        inputLineNumber++;
-    }
     else if (trimmedLine.StartsWith("("))
     {
         var label = trimmedLine.TrimStart('(').TrimEnd(')');
@@ -91,8 +139,61 @@ foreach (var line in fileLines)
     }
     else
     {
-        await WriteErrorAsync(inputLineNumber, line, "Instruction not recognised.");
-        return;
+        // C-instruction
+        var rest = trimmedLine;
+        var jump = "";
+        var dest = "";
+        var outputLine = "111";
+        
+        if (rest.Contains(";"))
+        {
+            var jumpStart = rest.IndexOf(';');
+            jump = rest.Substring(0, jumpStart);
+            rest = rest.Substring(jumpStart + 1);
+        }
+        
+        if (rest.Contains("="))
+        {
+            var destStart = rest.IndexOf('=');
+            dest = rest.Substring(0, destStart);
+            rest = rest.Substring(destStart + 1);
+        }
+
+        var comp = rest;
+        if (compComponents.ContainsKey(comp))
+        {
+            outputLine += compComponents[comp];
+        }
+        else
+        {
+            await WriteErrorAsync(inputLineNumber, line, "C-Instruction comp component not recognised.");
+            return ;
+        }
+        
+        if (destComponents.ContainsKey(dest))
+        {
+            outputLine += destComponents[dest];
+        }
+        else
+        {
+            await WriteErrorAsync(inputLineNumber, line, "C-Instruction dest component not recognised.");
+            return ;
+        }
+        
+        if (jumpComponents.ContainsKey(jump))
+        {
+            outputLine += destComponents[jump];
+        }
+        else
+        {
+            await WriteErrorAsync(inputLineNumber, line, "C-Instruction jump component not recognised.");
+            return ;
+        }
+
+        output.Add(outputLine);
+        
+        outputLineNumber++;
+        inputLineNumber++;
     }
 }
 
