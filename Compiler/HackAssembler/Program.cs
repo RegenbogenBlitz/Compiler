@@ -148,8 +148,8 @@ foreach (var line in fileLines)
         if (rest.Contains(";"))
         {
             var jumpStart = rest.IndexOf(';');
-            jump = rest.Substring(0, jumpStart);
-            rest = rest.Substring(jumpStart + 1);
+            jump = rest.Substring(jumpStart + 1);
+            rest = rest.Substring(0, jumpStart);
         }
         
         if (rest.Contains("="))
@@ -182,7 +182,7 @@ foreach (var line in fileLines)
         
         if (jumpComponents.ContainsKey(jump))
         {
-            outputLine += destComponents[jump];
+            outputLine += jumpComponents[jump];
         }
         else
         {
