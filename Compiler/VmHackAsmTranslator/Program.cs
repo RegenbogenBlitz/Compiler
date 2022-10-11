@@ -1,4 +1,6 @@
-﻿var path = args[0];
+﻿using VmHackAsmTranslator;
+
+var path = args[0];
 
 if (Path.GetExtension(path) != ".vm")
 {
@@ -21,8 +23,9 @@ if (vmFilesDirectory == null)
 
 var fileLines = await File.ReadAllLinesAsync(path);
 
+var output = VmTranslator.Translate(fileLines);
 
 var outputFileInfo = new FileInfo(Path.Join(vmFilesDirectory.FullName, Path.GetFileNameWithoutExtension(path) + ".asm"));
-File.WriteAllLines(outputFileInfo.FullName, fileLines);
+File.WriteAllText(outputFileInfo.FullName, output);
 
 Console.Write(outputFileInfo.FullName);
