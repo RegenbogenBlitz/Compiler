@@ -177,8 +177,29 @@ public static class VmTranslator
                     PushD(1) +
                     CloseSectionComment(0);
             
+            case "argument":
+                return
+                    OpenSectionComment($"Push M[M[Argument] + {index}]", 0) +
+                    IndirectMemoryToD("ARG", index, "Argument", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
+            case "this":
+                return
+                    OpenSectionComment($"Push M[M[This] + {index}]", 0) +
+                    IndirectMemoryToD("THIS", index, "This", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
+            case "that":
+                return
+                    OpenSectionComment($"Push M[M[That] + {index}]", 0) +
+                    IndirectMemoryToD("THAT", index, "That", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
             default:
-                return TrimLine(line);
+                return TrimLine(line) + Environment.NewLine;
         }
     }
 
@@ -247,8 +268,15 @@ public static class VmTranslator
     
     private static string DOperatorMemoryToD(string memoryAddress, string operatorSymbol, string commentOperator, int indentation) =>
         AInstruction(memoryAddress) +
-        PadLine($"D=D{operatorSymbol}M") + Comment($"D {commentOperator} {memoryAddress} => D", indentation);
+        PadLine($"D=D{operatorSymbol}M") + Comment($"D {commentOperator} M[{memoryAddress}] => D", indentation);
 
+    private static string IndirectMemoryToD(string memoryAddress, string index, string commentMemoryAddress, int indentation) =>
+        ValueToD(index, indentation) +
+        AInstruction(memoryAddress) +
+        PadLine("A=M") + Comment($"M[{commentMemoryAddress}] => A", indentation) +
+        PadLine("A=D+A") + Comment($"M[{commentMemoryAddress}] + {index} => A", indentation) +
+        PadLine("D=M") + Comment($"M[M[{commentMemoryAddress}] + {index}] => D", indentation);
+    
     private static string OperatorMemoryToMemory(string operatorSymbol, string commentOperator, int indentation) =>
         PadLine("A=M") + Environment.NewLine +
         PadLine($"M={operatorSymbol}M") + Comment($"{commentOperator}M => M", indentation);
