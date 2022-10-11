@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackAssembler", "HackAssembler\HackAssembler.csproj", "{0D8B73AF-CD78-48AA-98A3-4D6F58216DF7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VmHackAsmTranslator", "VmHackAsmTranslator\VmHackAsmTranslator.csproj", "{30B07088-3B76-43E0-BC3E-5B7C149D8EE5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{0D8B73AF-CD78-48AA-98A3-4D6F58216DF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D8B73AF-CD78-48AA-98A3-4D6F58216DF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D8B73AF-CD78-48AA-98A3-4D6F58216DF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30B07088-3B76-43E0-BC3E-5B7C149D8EE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30B07088-3B76-43E0-BC3E-5B7C149D8EE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30B07088-3B76-43E0-BC3E-5B7C149D8EE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30B07088-3B76-43E0-BC3E-5B7C149D8EE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
