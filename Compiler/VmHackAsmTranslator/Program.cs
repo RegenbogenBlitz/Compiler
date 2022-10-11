@@ -23,9 +23,16 @@ if (vmFilesDirectory == null)
 
 var fileLines = await File.ReadAllLinesAsync(path);
 
-var output = VmTranslator.Translate(fileLines);
+try
+{
+    var output = VmTranslator.Translate(fileLines);
+    var outputFileInfo =
+        new FileInfo(Path.Join(vmFilesDirectory.FullName, Path.GetFileNameWithoutExtension(path) + ".asm"));
+    File.WriteAllText(outputFileInfo.FullName, output);
 
-var outputFileInfo = new FileInfo(Path.Join(vmFilesDirectory.FullName, Path.GetFileNameWithoutExtension(path) + ".asm"));
-File.WriteAllText(outputFileInfo.FullName, output);
-
-Console.Write(outputFileInfo.FullName);
+    Console.Write(outputFileInfo.FullName);
+}
+catch (TranslationException ex)
+{
+    Console.Error.WriteLine(ex.Message);
+}
