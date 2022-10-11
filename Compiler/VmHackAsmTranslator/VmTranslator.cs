@@ -10,7 +10,7 @@ public static class VmTranslator
         
         const int baseStackAddress = 256;
 
-        output += SetMemoryToValue(StackPointerAddress, baseStackAddress.ToString());
+        output += SetMemoryToValue(StackPointerAddress, baseStackAddress.ToString(), 0);
 
         var lineNumber = 0;
         foreach (var line in lines)
@@ -33,6 +33,10 @@ public static class VmTranslator
                     }
 
                     output += WritePush(lineComponents[1], lineComponents[2], line);
+                    break;
+
+                case "add":
+                    output += WriteAdd();
                     break;
                 
                 default:
@@ -66,45 +70,83 @@ public static class VmTranslator
         {
             case "constant":
                 return
-                    OpenSectionComment($"Push Constant '{index}'")  +
-                    AInstruction(index) +
-                    PadLine("D=A") + IndentedComment($"{index} => D") +
-                    DToTopStack() +
-                    LiftStack() +
-                    CloseSectionComment();
+                    OpenSectionComment($"Push Constant '{index}'", 0) +
+                    AInstruction(index, 1) +
+                    PadLine("D=A") + Comment($"{index} => D", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
             default:
                 return TrimLine(line);
         }
     }
     
-    private static string SetMemoryToValue(string memoryAddress, string value) =>
-        OpenSectionComment($"Set {memoryAddress} to '{value}'")  +
-        AInstruction(value) +
-        PadLine("D=A") + IndentedComment($"{value} => D") +
-        AInstruction(memoryAddress) +
-        PadLine("M=D") + IndentedComment($"D => {memoryAddress}") +
-        CloseSectionComment();
+    private static string WriteAdd() =>
+        OpenSectionComment("Add", 0)  +
+        PopToD(1) +
+        DToMemory("R13", 1) +
+        PopToD(1) +
+        DPlusMemoryToD("R13", 1) +
+        PushD(1) +
+        CloseSectionComment(0);
 
-    private static string DToTopStack() =>
-        AInstruction("SP") +
-        PadLine("A=M") + Environment.NewLine +
-        PadLine("M=D") + IndentedComment("D => TopStack");
+    private static string SetMemoryToValue(string memoryAddress, string value, int indentation) =>
+        OpenSectionComment($"Set {memoryAddress} to '{value}'", indentation) +
+        AInstruction(value, indentation + 1) +
+        PadLine("D=A") + Comment($"{value} => D", indentation + 1) +
+        DToMemory(memoryAddress, indentation + 1) +
+        CloseSectionComment(indentation);
+
+    private static string PushD(int indentation) =>
+        OpenSectionComment("Push D", indentation) +
+        DToTopStack(indentation + 1) +
+        LiftStack(indentation + 1) +
+        CloseSectionComment(indentation);
     
-    private static string LiftStack() =>
-        AInstruction("SP") +
-        PadLine("M=M+1") + IndentedComment("Lift Stack");
+    private static string PopToD(int indentation) =>
+        OpenSectionComment("Pop to D", indentation) +
+        DropStack(indentation +1 ) +
+        TopStackToD(indentation +1 ) +
+        CloseSectionComment(indentation);
     
-    private static string AInstruction(string value)
-        => PadLine($"@{value}") + Environment.NewLine;
+    private static string DToMemory(string memoryAddress, int indentation) =>
+        AInstruction(memoryAddress, indentation) +
+        PadLine("M=D") + Comment($"D => {memoryAddress}", indentation);
+    
+    private static string DPlusMemoryToD(string memoryAddress, int indentation) =>
+        AInstruction(memoryAddress, indentation) +
+        PadLine("D=D+M") + Comment($"D + {memoryAddress} => D", indentation);
+    
+    private static string DToTopStack(int indentation) =>
+        AInstruction("SP", indentation) +
+        PadLine("A=M") + Comment("", indentation) +
+        PadLine("M=D") + Comment("D => TopStack", indentation);
+    
+    private static string TopStackToD(int indentation) =>
+        PadLine("A=M") + Comment("", indentation) +
+        PadLine("D=M") + Comment("TopStack => D", indentation);
+    
+    private static string LiftStack(int indentation) =>
+        AInstruction("SP", indentation) +
+        PadLine("M=M+1") + Comment("Lift Stack", indentation);
+    
+    private static string DropStack(int indentation) =>
+        AInstruction("SP", indentation) +
+        PadLine("M=M-1") + Comment("Drop Stack", indentation);
+    
+    private static string AInstruction(string value, int indentation)
+        => PadLine($"@{value}") + Comment("", indentation);
     
     private static string PadLine(string value)
-        => value.PadRight(5, ' ');
+        => value.PadRight(6, ' ');
     
-    private static string OpenSectionComment(string comment)
-        => PadLine("") + " // [" + comment +  "] {" + Environment.NewLine;
-    private static string IndentedComment(string comment)
-        => " //    " + comment + Environment.NewLine;
-    private static string CloseSectionComment()
-        => PadLine("") + " // }" + Environment.NewLine;
+    private static string OpenSectionComment(string comment, int indentation)
+        => PadLine("") + "// " + "".PadRight(indentation * 3, ' ') + "[" + comment +  "] {" + Environment.NewLine;
+
+    private static string Comment(string comment, int indentation)
+        => "// "+ "".PadRight(indentation * 3, ' ') + comment + Environment.NewLine;
+    
+    private static string CloseSectionComment(int indentation)
+        => PadLine("") + "// "+ "".PadRight(indentation * 3, ' ') + "}" + Environment.NewLine;
     
 }
