@@ -39,6 +39,7 @@ public static class VmTranslator
             switch (lineComponents[0])
             {
                 case "push":
+                {
                     if (lineComponents.Length != 3)
                     {
                         throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
@@ -50,11 +51,31 @@ public static class VmTranslator
                     }
                     else
                     {
-                        throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX, where INDEX is positive integer");
+                        throw new TranslationException(lineNumber, line,
+                            "expected Push SEGMENT INDEX, where INDEX is positive integer");
                     }
-                    
-                    break;
 
+                    break;
+                }
+                case "pop":
+                {
+                    if (lineComponents.Length != 3)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
+                    }
+
+                    if (uint.TryParse(lineComponents[2], out var index))
+                    {
+                        output += WritePop(lineComponents[1], index, lineNumber, line);
+                    }
+                    else
+                    {
+                        throw new TranslationException(lineNumber, line,
+                            "expected Pop SEGMENT INDEX, where INDEX is positive integer");
+                    }
+
+                    break;
+                }
                 case "add":
                     output += WriteBinaryOperator("+", "Add", "+");
                     break;
@@ -237,6 +258,73 @@ public static class VmTranslator
         }
     }
 
+    private static string WritePop(string segment, uint index, int lineNumber, string line)
+    {
+        switch (segment)
+        {
+            case "argument":
+                return
+                    OpenSectionComment($"Pop M[M[Argument] + {index}]", 0) +
+                    OffsetMemoryToMemory("ARG", "Argument", index, "R13", 1) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    DToIndirectMemory("R13", $"M[Argument] + {index}", 1) +
+                    CloseSectionComment(0);
+            
+            case "local":
+                return 
+                    OpenSectionComment($"Pop M[M[Local] + {index}]", 0) +
+                    OffsetMemoryToMemory("LCL", "Local", index, "R13", 1) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    DToIndirectMemory("R13", $"M[Local] + {index}", 1) +
+                    CloseSectionComment(0);
+            
+            case "static":
+                return line + Environment.NewLine;
+            
+            case "this":
+                return
+                    OpenSectionComment($"Pop M[M[This] + {index}]", 0) +
+                    OffsetMemoryToMemory("THIS", "This", index, "R13", 1) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    DToIndirectMemory("R13", $"M[This] + {index}", 1) +
+                    CloseSectionComment(0);
+            
+            case "that":
+                return
+                    OpenSectionComment($"Pop M[M[That] + {index}]", 0) +
+                    OffsetMemoryToMemory("THAT", "That", index, "R13", 1) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    DToIndirectMemory("R13", $"M[That] + {index}", 1) +
+                    CloseSectionComment(0);
+            
+            case "pointer":
+                return line + Environment.NewLine;
+            
+            case "temp":
+                var tempAddress = BaseTempAddress + index;
+                var memoryAddressComment = $"temp + {index}";
+                return
+                    OpenSectionComment($"Pop M[temp + {index}]", 0) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    PadLine($"@{tempAddress.ToString()}") + Comment($"{memoryAddressComment} => A", 1)  +
+                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", 1)  +
+                    CloseSectionComment(0);
+
+            // ReSharper disable once RedundantCaseLabel
+            case "constant":
+            default:
+                throw new TranslationException(
+                    lineNumber,
+                    line,
+                    "expected Pop SEGMENT INDEX, where SEGMENT is in {argument, local, static, this, that, pointer, temp}");
+        }
+    }
+    
     private static string WriteUnaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
         OpenSectionComment(operatorName, 0) +
         DropStack(1) +
@@ -308,12 +396,50 @@ public static class VmTranslator
         AInstruction(memoryAddress) +
         PadLine($"D=D{operatorSymbol}M") + Comment($"D {commentOperator} M[{memoryAddress}] => D", indentation);
 
-    private static string IndirectMemoryToD(string memoryAddress, uint index, string commentMemoryAddress, int indentation) =>
-        ValueToD(index.ToString(), indentation) +
+    private static string IndirectMemoryToD(string memoryAddress, uint index, string commentMemoryAddress, int indentation) 
+    {
+        if (index == 0)
+        {
+            return 
+                AInstruction(memoryAddress) +
+                PadLine("A=M") + Comment($"M[{commentMemoryAddress}] => A", indentation) +
+                PadLine("D=M") + Comment($"M[M[{commentMemoryAddress}] + 0] => D", indentation);
+        }
+        else
+        {
+            return 
+                ValueToD(index.ToString(), indentation) +
+                AInstruction(memoryAddress) +
+                PadLine("A=M") + Comment($"M[{commentMemoryAddress}] => A", indentation) +
+                PadLine("A=D+A") + Comment($"M[{commentMemoryAddress}] + {index} => A", indentation) +
+                PadLine("D=M") + Comment($"M[M[{commentMemoryAddress}] + {index}] => D", indentation);
+        }
+    }
+        
+    private static string DToIndirectMemory(string memoryAddress, string commentMemoryAddress, int indentation) =>  
         AInstruction(memoryAddress) +
-        PadLine("A=M") + Comment($"M[{commentMemoryAddress}] => A", indentation) +
-        PadLine("A=D+A") + Comment($"M[{commentMemoryAddress}] + {index} => A", indentation) +
-        PadLine("D=M") + Comment($"M[M[{commentMemoryAddress}] + {index}] => D", indentation);
+        PadLine("A=M") + Comment($"{commentMemoryAddress} => A", indentation) +
+        PadLine("M=D") + Comment($"D => {commentMemoryAddress}", indentation);
+    
+    private static string OffsetMemoryToMemory(string fromMemoryAddress, string commentFromMemoryAddress, uint index, string toMemoryAddress, int indentation) 
+    {
+        if (index == 0)
+        {
+            return
+                AInstruction(fromMemoryAddress) +
+                PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
+                DToMemory(toMemoryAddress, indentation);
+        }
+        else
+        {
+            return 
+                AInstruction(fromMemoryAddress) +
+                PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
+                AInstruction(index.ToString()) +
+                PadLine("D=D+A") + Comment($"M[{commentFromMemoryAddress}] + {index} => D", indentation) +
+                DToMemory(toMemoryAddress, indentation);
+        }
+    }
     
     private static string OperatorMemoryToMemory(string operatorSymbol, string commentOperator, int indentation) =>
         PadLine("A=M") + Environment.NewLine +
