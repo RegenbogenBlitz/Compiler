@@ -4,6 +4,7 @@ public static class VmTranslator
 {
     private const string StackPointerAddress = "SP";
     private const int BaseStackAddress = 256;
+    private const int BaseTempAddress = 5;
     
     private const string SkipSubsLabel = "SKIP_SUBS";
     private const string IsTrueLabel = "IS_TRUE";
@@ -43,7 +44,15 @@ public static class VmTranslator
                         throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
                     }
 
-                    output += WritePush(lineComponents[1], lineComponents[2], line);
+                    if (uint.TryParse(lineComponents[2], out var index))
+                    {
+                        output += WritePush(lineComponents[1], index, lineNumber, line);
+                    }
+                    else
+                    {
+                        throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX, where INDEX is positive integer");
+                    }
+                    
                     break;
 
                 case "add":
@@ -166,21 +175,31 @@ public static class VmTranslator
         WriteLabel("END") +
         UnconditionalJump("END", 0);
     
-    private static string WritePush(string segment, string index, string line)
+    private static string WritePush(string segment, uint index, int lineNumber, string line)
     {
         switch (segment)
         {
-            case "constant":
-                return
-                    OpenSectionComment($"Push Constant '{index}'", 0) +
-                    ValueToD(index, 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
-            
             case "argument":
                 return
                     OpenSectionComment($"Push M[M[Argument] + {index}]", 0) +
                     IndirectMemoryToD("ARG", index, "Argument", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
+            case "local":
+                return
+                    OpenSectionComment($"Push M[M[Local] + {index}]", 0) +
+                    IndirectMemoryToD("LCL", index, "Local", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
+            case "static":
+                return line;
+            
+            case "constant":
+                return
+                    OpenSectionComment($"Push Constant '{index}'", 0) +
+                    ValueToD(index.ToString(), 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
@@ -198,8 +217,23 @@ public static class VmTranslator
                     PushD(1) +
                     CloseSectionComment(0);
             
+            case "pointer":
+                return line;
+            
+            case "temp":
+                var tempAddress = BaseTempAddress + index;
+                
+                return
+                    OpenSectionComment($"Push M[temp + {index}]", 0) +
+                    MemoryToD(tempAddress.ToString(), $"temp + {index}", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
+            
             default:
-                return TrimLine(line) + Environment.NewLine;
+                throw new TranslationException(
+                    lineNumber,
+                    line,
+             "expected Push SEGMENT INDEX, where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}");
         }
     }
 
@@ -258,6 +292,10 @@ public static class VmTranslator
         AInstruction(memoryAddress) +
         PadLine("M=D") + Comment($"D => {memoryAddress}", indentation);
 
+    private static string MemoryToD(string memoryAddress, string memoryAddressComment, int indentation) =>
+        AInstruction(memoryAddress) +
+        PadLine("D=M") + Comment($"{memoryAddressComment} => D", indentation);
+    
     private static string ValueToD(string value, int indentation) =>
         AInstruction(value) +
         PadLine("D=A") + Comment($"{value} => D", indentation);
@@ -270,8 +308,8 @@ public static class VmTranslator
         AInstruction(memoryAddress) +
         PadLine($"D=D{operatorSymbol}M") + Comment($"D {commentOperator} M[{memoryAddress}] => D", indentation);
 
-    private static string IndirectMemoryToD(string memoryAddress, string index, string commentMemoryAddress, int indentation) =>
-        ValueToD(index, indentation) +
+    private static string IndirectMemoryToD(string memoryAddress, uint index, string commentMemoryAddress, int indentation) =>
+        ValueToD(index.ToString(), indentation) +
         AInstruction(memoryAddress) +
         PadLine("A=M") + Comment($"M[{commentMemoryAddress}] => A", indentation) +
         PadLine("A=D+A") + Comment($"M[{commentMemoryAddress}] + {index} => A", indentation) +
