@@ -216,7 +216,11 @@ public static class VmTranslator
                     CloseSectionComment(0);
             
             case "static":
-                return line + Environment.NewLine;
+                return
+                    OpenSectionComment($"Push M[Static {index}]", 0) +
+                    MemoryToD($"StaticTest.{index}", $"M[M[Static {index}]]", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
             
             case "constant":
                 return
@@ -288,7 +292,13 @@ public static class VmTranslator
                     CloseSectionComment(0);
             
             case "static":
-                return line + Environment.NewLine;
+                return
+                    OpenSectionComment($"Pop M[Static {index}]", 0) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    AInstruction($"StaticTest.{index}") +
+                    PadLine("M=D") + Comment($"D => M[Static {index}]", 1) +
+                    CloseSectionComment(0);
             
             case "this":
                 return
