@@ -2,9 +2,10 @@ namespace VmHackAsmTranslator;
 
 public static class VmTranslator
 {
+    private const int BasePointerAddress = 3;
+    private const int BaseTempAddress = 5;
     private const string StackPointerAddress = "SP";
     private const int BaseStackAddress = 256;
-    private const int BaseTempAddress = 5;
     
     private const string SkipSubsLabel = "SKIP_SUBS";
     private const string IsTrueLabel = "IS_TRUE";
@@ -215,7 +216,7 @@ public static class VmTranslator
                     CloseSectionComment(0);
             
             case "static":
-                return line;
+                return line + Environment.NewLine;
             
             case "constant":
                 return
@@ -239,7 +240,13 @@ public static class VmTranslator
                     CloseSectionComment(0);
             
             case "pointer":
-                return line;
+                var pointerAddress = BasePointerAddress + index;
+                
+                return
+                    OpenSectionComment($"Push M[pointer + {index}]", 0) +
+                    MemoryToD(pointerAddress.ToString(), $"pointer + {index}", 1) +
+                    PushD(1) +
+                    CloseSectionComment(0);
             
             case "temp":
                 var tempAddress = BaseTempAddress + index;
@@ -300,21 +307,32 @@ public static class VmTranslator
                     TopStackToD(1) +
                     DToIndirectMemory("R13", $"M[That] + {index}", 1) +
                     CloseSectionComment(0);
-            
+
             case "pointer":
-                return line + Environment.NewLine;
-            
+            {
+                var pointerAddress = BasePointerAddress + index;
+                var memoryAddressComment = $"pointer + {index}";
+                return
+                    OpenSectionComment($"Pop M[pointer + {index}]", 0) +
+                    DropStack(1) +
+                    TopStackToD(1) +
+                    PadLine($"@{pointerAddress.ToString()}") + Comment($"{memoryAddressComment} => A", 1) +
+                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", 1) +
+                    CloseSectionComment(0);
+            }
+
             case "temp":
+            {
                 var tempAddress = BaseTempAddress + index;
                 var memoryAddressComment = $"temp + {index}";
                 return
                     OpenSectionComment($"Pop M[temp + {index}]", 0) +
                     DropStack(1) +
                     TopStackToD(1) +
-                    PadLine($"@{tempAddress.ToString()}") + Comment($"{memoryAddressComment} => A", 1)  +
-                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", 1)  +
+                    PadLine($"@{tempAddress.ToString()}") + Comment($"{memoryAddressComment} => A", 1) +
+                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", 1) +
                     CloseSectionComment(0);
-
+            }
             // ReSharper disable once RedundantCaseLabel
             case "constant":
             default:
