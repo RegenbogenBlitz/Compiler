@@ -140,6 +140,18 @@ public static class VmTranslator
 
                     break;
                 }
+                case "goto":
+                {
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
+                    }
+
+                    var label = lineComponents[1];
+                    output += WriteGoto(className, functionName, label);
+
+                    break;
+                }
                 default:
                     output += trimmedLine + Environment.NewLine;
                     break;
@@ -421,6 +433,11 @@ public static class VmTranslator
         DropStack(1) +
         TopStackToD(1) +
         ConditionalJump("JNE", VmLabelToAsmLabel(className, functionName, label), 1) +
+        CloseSectionComment(0);
+    
+    private static string WriteGoto(string className, string functionName, string label) =>
+        OpenSectionComment($"Goto {VmLabelToAsmLabel(className, functionName, label)}", 0) +
+        UnconditionalJump(VmLabelToAsmLabel(className, functionName, label), 1) +
         CloseSectionComment(0);
     
     private static string BinaryOperatorToD(string operatorSymbol, string commentOperator, int indentation) =>
