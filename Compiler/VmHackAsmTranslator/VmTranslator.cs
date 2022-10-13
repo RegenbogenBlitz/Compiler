@@ -26,6 +26,9 @@ public static class VmTranslator
         var output = WriteHeader();
 
         var lineNumber = 0;
+
+        const string className = "dummyClass";
+        const string functionName = "dummyFunction";
         foreach (var line in lines)
         {
             lineNumber++;
@@ -112,7 +115,31 @@ public static class VmTranslator
                 case "gt":
                     output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
                     break;
-                
+
+                case "label":
+                {
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected label SYMBOL");
+                    }
+
+                    var label = lineComponents[1];
+                    output += WriteLabel(className, functionName, label);
+
+                    break;
+                }
+                case "if-goto":
+                {
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
+                    }
+
+                    var label = lineComponents[1];
+                    output += WriteIfGoto(className, functionName, label);
+
+                    break;
+                }
                 default:
                     output += trimmedLine + Environment.NewLine;
                     break;
@@ -382,6 +409,19 @@ public static class VmTranslator
         _returnLabelNum++;
         return equalsSection;
     }
+
+    private static string VmLabelToAsmLabel(string className, string functionName, string label) =>
+        $"{className}.{functionName}${label}";
+    
+    private static string WriteLabel(string className, string functionName, string label) =>
+        $"({VmLabelToAsmLabel(className, functionName, label)})" + Environment.NewLine;
+
+    private static string WriteIfGoto(string className, string functionName, string label) =>
+        OpenSectionComment($"If-Goto {VmLabelToAsmLabel(className, functionName, label)}", 0) +
+        DropStack(1) +
+        TopStackToD(1) +
+        ConditionalJump("JNE", VmLabelToAsmLabel(className, functionName, label), 1) +
+        CloseSectionComment(0);
     
     private static string BinaryOperatorToD(string operatorSymbol, string commentOperator, int indentation) =>
         PopToD(indentation) +
@@ -499,11 +539,23 @@ public static class VmTranslator
     private static string UnconditionalJump(string address, int indentation) =>
         AInstruction(address) +
         PadLine("0;JMP")  + Comment($"goto {address}", indentation);
-    
-    private static string ConditionalJump(string jumpType, string address, int indentation) =>
-        AInstruction(address) +
-        PadLine($"D;{jumpType}")  + Comment($"goto {address}", indentation);
-    
+
+    private static string ConditionalJump(string jumpType, string address, int indentation)
+    {
+        if (jumpType == "JNE")
+        {
+            return
+                AInstruction(address) +
+                PadLine($"D;{jumpType}") + Comment($"if D!= 0 then goto {address}", indentation);
+        }
+        else
+        {
+            return
+                AInstruction(address) +
+                PadLine($"D;{jumpType}") + Comment($"goto {address}", indentation);
+        }
+    }
+
     private static string UnconditionalJumpToAddressInMemory(string memoryAddress, int indentation) =>
         AInstruction(memoryAddress) +
         PadLine("A=M") + Environment.NewLine +
