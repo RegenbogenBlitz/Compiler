@@ -1,0 +1,230 @@
+/**
+ * Represents a String object. Implements the String type.
+ */
+class String 
+{
+    field Array charArray;
+    field int currentMaxLength;
+    field int currentLength;
+    
+    /** Constructs a new empty String with a maximum length of maxLength. */
+    constructor String new(int maxLength) 
+    {
+        if(maxLength < 0)
+        {
+            do Sys.error(14);
+        }
+        
+        if(maxLength > 0)
+        {
+            let charArray = Array.new(maxLength);
+        }
+        
+        let currentMaxLength = maxLength;
+        let currentLength = 0;
+            
+        return this;
+    }
+
+    /** De-allocates the string and frees its space. */
+    method void dispose() 
+    {
+        if(~(charArray = null))
+        {
+            do charArray.dispose();
+        }
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /** Returns the current length of this String. */
+    method int length() 
+    {
+        return currentLength;
+    }
+
+    /** Returns the character at location j. */
+    method char charAt(int j) 
+    {
+        if(~(j < currentMaxLength))
+        {
+            do Sys.error(15);
+        }
+        return charArray[j];
+    }
+
+    /** Sets the j'th character of this string to be c. */
+    method void setCharAt(int j, char c) 
+    {
+        if(~(j < currentMaxLength))
+        {
+            do Sys.error(16);
+        }
+        
+        let charArray[j] = c;
+        return;
+    }
+
+    /** Appends the character c to the end of this String.
+     *  Returns this string as the return value. */
+    method String appendChar(char c) 
+    {
+        if(currentLength = currentMaxLength)
+        {
+            do Sys.error(17);
+        }
+        
+        do setCharAt(currentLength, c);
+        let currentLength = currentLength + 1;
+        return this;
+    }
+
+    /** Erases the last character from this String. */
+    method void eraseLastChar() 
+    {
+        if(currentLength = 0)
+        {
+            do Sys.error(18);
+        }
+        
+        let currentLength = currentLength - 1;
+        return;
+    }
+
+    /** Returns the integer value of this String until the first non
+     *  numeric character. */
+    method int intValue() 
+    {
+        var int v;
+        var char si;
+        var bool isNegative;
+        var int i;
+        
+        let v = 0;
+        let isNegative = false;
+        
+        let i = 0;
+        while(i < currentLength)
+        {
+            let si = charArray[i];
+            
+            if((~(si = 45) | i > 0) & (si < 48 | 57 < si))
+            {
+                return v;
+            }
+            
+            if(si = 45)
+            {
+                let isNegative = true;
+            }
+            else
+            {
+                let v = (v * 10) + (si - 48);
+            }
+            
+            let i = i + 1;
+        }
+        
+        if(isNegative)
+        {
+            let v = -v;
+        }
+        
+        return v;
+    }
+
+    /** Sets this String to hold a representation of the given number. */
+    method void setInt(int number) 
+    {
+        var int firstDigit;
+        var int bigTen;
+        var bool firstDigitWritten;
+        var int leadingChunk;
+        
+        let currentLength = 0;
+        
+        let firstDigit = 3;
+        let bigTen = 10000;
+        let firstDigitWritten = false;
+                  
+        if(number<0)
+        {
+            let number = -number;
+            if(currentLength = currentMaxLength)
+            {
+                do Sys.error(19);
+            }
+            do appendChar(45); // '-'
+        }
+                
+        while(true)
+        {
+            let leadingChunk = firstDigit * bigTen;
+            
+            if(firstDigit = 0)
+            {
+                if ((bigTen = 1) | firstDigitWritten)
+                {
+                    if(currentLength = currentMaxLength)
+                    {
+                        do Sys.error(19);
+                    }
+                    do appendChar(48);
+                    if (bigTen = 1)
+                    {
+                        return;
+                    }
+                }
+                
+                let firstDigit = 9;
+                let bigTen = bigTen / 10;
+            }
+            else
+            {
+                if((leadingChunk < number) | (leadingChunk = number))
+                {
+                    if(currentLength = currentMaxLength)
+                    {
+                        do Sys.error(19);
+                    }
+                    do appendChar(firstDigit + 48);
+                    if (bigTen = 1)
+                    {
+                        return;
+                    }
+                    
+                    let firstDigitWritten = true;
+                    let number = number - leadingChunk;
+                    
+                    let firstDigit = 9;
+                    let bigTen = bigTen / 10;
+                }
+                else
+                {
+                    let firstDigit = firstDigit - 1;
+                }
+            }
+        }
+
+        do Sys.error(-1); 
+        return;
+    }
+
+    /** Returns the new line character. */
+    function char newLine() 
+    {
+        return 128;
+    }
+
+    /** Returns the backspace character. */
+    function char backSpace() 
+    {
+        return 129;
+    }
+
+    /** Returns the double quote (") character. */
+    function char doubleQuote() 
+    {
+        return 34;
+    }
+}

@@ -1,0 +1,229 @@
+/**
+ * Memory operations library.
+ */ 
+class Memory 
+{
+    static int firstBlockAddress;
+    
+    /** Initializes memory parameters. */
+    function void init() 
+    {
+        let firstBlockAddress = 2048;
+        do Memory.poke(firstBlockAddress, 14336);
+        do Memory.poke(firstBlockAddress + 1, null);
+        
+        return;
+    }
+
+    /** Returns the value of the main memory at the given address. */
+    function int peek(int address) 
+    {
+        var Array memory;
+        
+        let memory = 0;
+        
+        return memory[address];
+    }
+
+    /** Sets the value of the main memory at this address
+     *  to the given value. */
+    function void poke(int address, int value) 
+    {
+        var Array memory;
+        
+        let memory = 0;
+        
+        let memory[address] = value;
+        
+        return;
+    }
+
+    /** finds and allocates from the heap a memory block of the 
+     *  specified size and returns a reference to its base address. */
+    function int alloc(int size) 
+    {
+        var int newObjectLength;
+        var int newObjectAddress;
+        
+        var int previousAddressPointerAddress;
+        
+        var int currentBlockAddress;
+        var int currentBlockLength;
+        var int currentBlockNewAddress;
+        
+        var int nextBlockAddress;
+        
+        var bool isFirstBlock;
+        var bool isLastBlock;
+        
+        if((~(size > 0)) | (firstBlockAddress = 0))
+        {
+            do Sys.error(5);
+            return 0;
+        }
+        
+        let newObjectLength = (size + 1);
+        let previousAddressPointerAddress = 0;
+        let currentBlockAddress = firstBlockAddress;
+        while(true)
+        {
+            let currentBlockLength = Memory.peek(currentBlockAddress);
+            
+            let nextBlockAddress = Memory.peek(currentBlockAddress + 1);
+            
+            let isFirstBlock = (currentBlockAddress = firstBlockAddress);
+            let isLastBlock = (nextBlockAddress = 0);
+            
+            if(~(currentBlockLength < (newObjectLength + 2)))
+            {
+                let currentBlockNewAddress = currentBlockAddress + newObjectLength;
+                
+                if(isFirstBlock)
+                {
+                    let firstBlockAddress = currentBlockNewAddress;
+                }
+                else
+                {
+                    do Memory.poke(previousAddressPointerAddress, currentBlockNewAddress);
+                }
+                            
+                do Memory.poke(currentBlockAddress, newObjectLength);
+                                
+                do Memory.poke(currentBlockNewAddress, currentBlockLength - newObjectLength);
+                do Memory.poke(currentBlockNewAddress + 1, nextBlockAddress);
+                
+                return currentBlockAddress + 1;
+            }
+            
+            if(currentBlockLength = newObjectLength)
+            {
+                if(isFirstBlock)
+                {
+                    if(isLastBlock)
+                    {
+                        let firstBlockAddress = 0;
+                    }
+                    else
+                    {
+                        let firstBlockAddress = nextBlockAddress;
+                    }
+                }
+                else
+                {
+                    do Memory.poke(previousAddressPointerAddress, nextBlockAddress);
+                }
+                
+                return currentBlockAddress + 1;
+            }
+            
+            if(isLastBlock)
+            {
+                do Sys.error(6);
+                return 0;
+            }
+            
+            let previousAddressPointerAddress = currentBlockAddress + 1;
+            let currentBlockAddress = nextBlockAddress;
+        }
+        
+        return 0;
+    }
+
+    /** De-allocates the given object and frees its space. */
+    function void deAlloc(int object) 
+    {
+        var int freeBlockAddress;
+        var int freeBlockLength;
+        
+        var int previousBlockAddress;
+        var int previousBlockLength;
+        
+        var int currentBlockAddress;
+        var int currentBlockLength;
+        
+        var int nextBlockAddress;
+        
+        var bool isFirstBlock;
+        var bool isLastBlock;
+        
+        let freeBlockAddress = object - 1;
+        let freeBlockLength = Memory.peek(freeBlockAddress);
+        
+        if(firstBlockAddress = 0)
+        {
+            let firstBlockAddress = freeBlockAddress;
+            do Memory.poke(firstBlockAddress + 1, null);
+            return;
+        }
+                
+        let previousBlockAddress = 0;
+        let previousBlockLength = 0;
+        let currentBlockAddress = firstBlockAddress;
+        while(true)
+        {
+            let currentBlockLength = Memory.peek(currentBlockAddress);
+            let nextBlockAddress = Memory.peek(currentBlockAddress + 1);
+            
+            let isFirstBlock = (currentBlockAddress = firstBlockAddress);
+            let isLastBlock = (nextBlockAddress = 0);
+            
+            if(freeBlockAddress < currentBlockAddress)
+            {
+                if(isFirstBlock)
+                {
+                    let firstBlockAddress = freeBlockAddress;
+                }
+                else
+                {
+                    if(previousBlockAddress + previousBlockLength = freeBlockAddress)
+                    {
+                        let freeBlockAddress = previousBlockAddress;
+                        let freeBlockLength = previousBlockLength + freeBlockLength;
+                        do Memory.poke(freeBlockAddress, freeBlockLength);
+                    }
+                    else
+                    {
+                        do Memory.poke(previousBlockAddress + 1, freeBlockAddress);
+                    }
+                }
+                                
+                if(freeBlockAddress + freeBlockLength  = currentBlockAddress)
+                {
+                    let freeBlockLength = freeBlockLength + currentBlockAddress;
+                    do Memory.poke(freeBlockAddress, freeBlockLength);
+                    do Memory.poke(freeBlockAddress + 1, nextBlockAddress);
+                }
+                else
+                {
+                    do Memory.poke(freeBlockAddress + 1, currentBlockAddress);
+                }
+                           
+                return;
+            }
+            
+            if(isLastBlock)
+            {
+                if(currentBlockAddress + currentBlockLength = freeBlockAddress)
+                {
+                    let freeBlockAddress = currentBlockAddress;
+                    let freeBlockLength = currentBlockLength + freeBlockLength;
+                    do Memory.poke(freeBlockAddress, freeBlockLength);
+                }
+                else
+                {
+                    do Memory.poke(currentBlockAddress + 1, freeBlockAddress);
+                }
+                    
+                do Memory.poke(freeBlockAddress + 1, null);
+                
+                return;
+            }
+            
+            let previousBlockAddress = currentBlockAddress;
+            let previousBlockLength = currentBlockLength;
+            let currentBlockAddress = nextBlockAddress;
+        }
+        
+        return;
+    }    
+}
