@@ -36,139 +36,151 @@ public static class VmTranslator
 
         const string className = "dummyClass";
         const string functionName = "dummyFunction";
-        foreach (var line in vmCode.FileContent)
+        foreach (var command in vmCode.Commands)
         {
             lineNumber++;
-            var trimmedLine = TrimLine(line);
-            if (string.IsNullOrWhiteSpace(trimmedLine))
+            
+            switch (command)
             {
-                continue;
+                case FunctionCallCommand functionCallCommand:
+                    var line = functionCallCommand.LineContent;
+                    
+                    var trimmedLine = TrimLine(line);
+                    if (string.IsNullOrWhiteSpace(trimmedLine))
+                    {
+                        continue;
+                    }
+                    
+                    var lineComponents = trimmedLine.Split(' ');
+        
+                    switch (lineComponents[0])
+                    {
+                        case "push":
+                        {
+                            if (lineComponents.Length != 3)
+                            {
+                                throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
+                            }
+        
+                            if (uint.TryParse(lineComponents[2], out var index))
+                            {
+                                output += WritePush(lineComponents[1], index, lineNumber, line);
+                            }
+                            else
+                            {
+                                throw new TranslationException(lineNumber, line,
+                                    "expected Push SEGMENT INDEX, where INDEX is positive integer");
+                            }
+        
+                            break;
+                        }
+                        case "pop":
+                        {
+                            if (lineComponents.Length != 3)
+                            {
+                                throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
+                            }
+        
+                            if (UInt16.TryParse(lineComponents[2], out var index))
+                            {
+                                output += WritePop(lineComponents[1], index, lineNumber, line, 0);
+                            }
+                            else
+                            {
+                                throw new TranslationException(lineNumber, line,
+                                    "expected Pop SEGMENT INDEX, where INDEX is positive integer");
+                            }
+        
+                            break;
+                        }
+                        case "add":
+                            output += WriteBinaryOperator("+", "Add", "+");
+                            break;
+                        
+                        case "sub":
+                            output += WriteBinaryOperator("-", "Subtract", "-");
+                            break;
+                        
+                        case "neg":
+                            output += WriteUnaryOperator("-", "Negative", "-");
+                            break;
+                        
+                        case "and":
+                            output += WriteBinaryOperator("&", "And", "and");
+                            break;
+                        
+                        case "or":
+                            output += WriteBinaryOperator("|", "Or", "or");
+                            break;
+                        
+                        case "not":
+                            output += WriteUnaryOperator("!", "Not", "not ");
+                            break;
+                        
+                        case "eq":
+                            output += WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel);
+                            break;
+                        
+                        case "lt":
+                            output += WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel);
+                            break;
+                        
+                        case "gt":
+                            output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
+                            break;
+        
+                        case "label":
+                        {
+                            if (lineComponents.Length != 2)
+                            {
+                                throw new TranslationException(lineNumber, line, "expected label SYMBOL");
+                            }
+        
+                            var label = lineComponents[1];
+                            output += WriteLabel(className, functionName, label);
+        
+                            break;
+                        }
+                        case "if-goto":
+                        {
+                            if (lineComponents.Length != 2)
+                            {
+                                throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
+                            }
+        
+                            var label = lineComponents[1];
+                            output += WriteIfGoto(className, functionName, label);
+        
+                            break;
+                        }
+                        case "goto":
+                        {
+                            if (lineComponents.Length != 2)
+                            {
+                                throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
+                            }
+        
+                            var label = lineComponents[1];
+                            output += WriteGoto(className, functionName, label);
+        
+                            break;
+                        }
+                        case "return":
+                        {
+                            output += WriteReturn();
+        
+                            break;
+                        }
+                        default:
+                            output += trimmedLine + Environment.NewLine;
+                            break;
+                    }
+                    
+                    break;
+                default:
+                    throw new NotImplementedException();
             }
             
-            var lineComponents = trimmedLine.Split(' ');
-
-            switch (lineComponents[0])
-            {
-                case "push":
-                {
-                    if (lineComponents.Length != 3)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
-                    }
-
-                    if (uint.TryParse(lineComponents[2], out var index))
-                    {
-                        output += WritePush(lineComponents[1], index, lineNumber, line);
-                    }
-                    else
-                    {
-                        throw new TranslationException(lineNumber, line,
-                            "expected Push SEGMENT INDEX, where INDEX is positive integer");
-                    }
-
-                    break;
-                }
-                case "pop":
-                {
-                    if (lineComponents.Length != 3)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
-                    }
-
-                    if (UInt16.TryParse(lineComponents[2], out var index))
-                    {
-                        output += WritePop(lineComponents[1], index, lineNumber, line, 0);
-                    }
-                    else
-                    {
-                        throw new TranslationException(lineNumber, line,
-                            "expected Pop SEGMENT INDEX, where INDEX is positive integer");
-                    }
-
-                    break;
-                }
-                case "add":
-                    output += WriteBinaryOperator("+", "Add", "+");
-                    break;
-                
-                case "sub":
-                    output += WriteBinaryOperator("-", "Subtract", "-");
-                    break;
-                
-                case "neg":
-                    output += WriteUnaryOperator("-", "Negative", "-");
-                    break;
-                
-                case "and":
-                    output += WriteBinaryOperator("&", "And", "and");
-                    break;
-                
-                case "or":
-                    output += WriteBinaryOperator("|", "Or", "or");
-                    break;
-                
-                case "not":
-                    output += WriteUnaryOperator("!", "Not", "not ");
-                    break;
-                
-                case "eq":
-                    output += WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel);
-                    break;
-                
-                case "lt":
-                    output += WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel);
-                    break;
-                
-                case "gt":
-                    output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
-                    break;
-
-                case "label":
-                {
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected label SYMBOL");
-                    }
-
-                    var label = lineComponents[1];
-                    output += WriteLabel(className, functionName, label);
-
-                    break;
-                }
-                case "if-goto":
-                {
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
-                    }
-
-                    var label = lineComponents[1];
-                    output += WriteIfGoto(className, functionName, label);
-
-                    break;
-                }
-                case "goto":
-                {
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
-                    }
-
-                    var label = lineComponents[1];
-                    output += WriteGoto(className, functionName, label);
-
-                    break;
-                }
-                case "return":
-                {
-                    output += WriteReturn();
-
-                    break;
-                }
-                default:
-                    output += trimmedLine + Environment.NewLine;
-                    break;
-            }
         }
 
         output += WriteFooter();

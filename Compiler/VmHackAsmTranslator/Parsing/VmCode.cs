@@ -2,10 +2,10 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class VmCode
 {
-    public VmCode(string[] fileContent)
+    public VmCode(IEnumerable<ICommand> commands)
     {
-        FileContent = fileContent;
+        Commands = commands;
     }
 
-    public readonly string[] FileContent;
+    public readonly IEnumerable<ICommand> Commands;
 }
