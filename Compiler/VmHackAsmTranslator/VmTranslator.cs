@@ -1,3 +1,5 @@
+using FileHandling;
+
 namespace VmHackAsmTranslator;
 
 public static class VmTranslator
@@ -23,7 +25,7 @@ public static class VmTranslator
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static int _returnLabelNum = 0;
         
-    public static string Translate(string[] lines)
+    public static OutputFileInfo Translate(string outputFileName, IEnumerable<InputFileInfo> inputFileInfos)
     {
         var output = WriteHeader();
 
@@ -31,7 +33,7 @@ public static class VmTranslator
 
         const string className = "dummyClass";
         const string functionName = "dummyFunction";
-        foreach (var line in lines)
+        foreach (var line in inputFileInfos.First().Content)
         {
             lineNumber++;
             var trimmedLine = TrimLine(line);
@@ -168,7 +170,7 @@ public static class VmTranslator
 
         output += WriteFooter();
         
-        return output;
+        return new OutputFileInfo(outputFileName, "asm", output);
     }
     
     private static string TrimLine(string line)

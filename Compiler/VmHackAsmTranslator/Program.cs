@@ -1,36 +1,26 @@
-﻿using VmHackAsmTranslator;
+﻿using FileHandling;
+using VmHackAsmTranslator;
 
-var path = args[0];
+const string inputFileExtension = ".vm";
 
-if (Path.GetExtension(path) != ".vm")
+if (args == null || args.Length == 0)
 {
-    await Console.Error.WriteLineAsync($"File path '{path}' does not have the .vm extension.");
-    return ;
+    throw new ArgumentNullException("args", "Must supply file name or directory.");
 }
 
-var fileInfo = new FileInfo(path);
-if (!fileInfo.Exists)
-{
-    await Console.Error.WriteLineAsync($"File '{path}' does not exist.");
-    return ;
-}
-
-var vmFilesDirectory = fileInfo.Directory;
-if (vmFilesDirectory == null)
-{
-    throw new IOException($"File '{path}' existed but directory now does not.");
-}
-
-var fileLines = await File.ReadAllLinesAsync(path);
+string fileOrFolderPath = args[0];
+var inputFileHandler = new InputFileHandler(inputFileExtension);
+var inputFilesContent = 
+    inputFileHandler.ReadInputFileContent(fileOrFolderPath, out var folderParent);
 
 try
 {
-    var output = VmTranslator.Translate(fileLines);
-    var outputFileInfo =
-        new FileInfo(Path.Join(vmFilesDirectory.FullName, Path.GetFileNameWithoutExtension(path) + ".asm"));
-    File.WriteAllText(outputFileInfo.FullName, output);
+    var directory = new DirectoryInfo(folderParent);
+    var outputFileInfo = VmTranslator.Translate(directory.Name, inputFilesContent);
 
-    Console.Write(outputFileInfo.FullName);
+    OutputFileHandler.WriteOutputFileContent(
+        folderParent,
+        new[] { outputFileInfo });
 }
 catch (TranslationException ex)
 {
