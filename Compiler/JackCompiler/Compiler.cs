@@ -1,4 +1,6 @@
-﻿namespace JackCompiler
+﻿using FileHandling;
+
+namespace JackCompiler
 {
     using System;
     using System.Collections.Generic;
@@ -10,6 +12,8 @@
 
     internal static class Compiler
     {
+        private const string OutputFileExtension = "vm";
+        
         internal static IEnumerable<OutputFileInfo> Compile(IEnumerable<InputFileInfo> fileInfos)
         {
             var outputFileInfos = new List<OutputFileInfo>();
@@ -46,6 +50,7 @@
                     {
                         var outFile = new OutputFileInfo(
                             inputFileInfo.FileName,
+                            OutputFileExtension,
                             syntaxAnalysisResult.Detail.ToString());
 
                         outputFileInfos.Add(outFile);
@@ -66,7 +71,7 @@
                 if (compilerErrors.Any())
                 {
                     var report = string.Join("\r\n", compilerErrors.Select(e=>e.Description()));
-                    outputFileInfos.Add(new OutputFileInfo("CompilerErrors", report));
+                    outputFileInfos.Add(new OutputFileInfo("CompilerErrors", "txt", report));
                 }
                 else
                 {
@@ -83,7 +88,7 @@
                     {
                         var content = classVmCodes[className];
 
-                        outputFileInfos.Add(new OutputFileInfo(className, content));
+                        outputFileInfos.Add(new OutputFileInfo(className, OutputFileExtension, content));
                     }
                 }
 
