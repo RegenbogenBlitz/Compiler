@@ -1,4 +1,5 @@
 using FileHandling;
+using VmHackAsmTranslator.Parsing;
 
 namespace VmHackAsmTranslator;
 
@@ -27,13 +28,15 @@ public static class VmTranslator
         
     public static OutputFileInfo Translate(string outputFileName, IEnumerable<InputFileInfo> inputFileInfos)
     {
+        var vmCode = VmCodeParser.Parse(inputFileInfos);
+        
         var output = WriteHeader();
 
         var lineNumber = 0;
 
         const string className = "dummyClass";
         const string functionName = "dummyFunction";
-        foreach (var line in inputFileInfos.First().Content)
+        foreach (var line in vmCode.FileContent)
         {
             lineNumber++;
             var trimmedLine = TrimLine(line);
