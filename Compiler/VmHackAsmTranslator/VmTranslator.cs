@@ -42,57 +42,58 @@ public static class VmTranslator
             
             switch (command)
             {
-                case FunctionCallCommand functionCallCommand:
-                    var line = functionCallCommand.LineContent;
+                case PushCommand pushCommand:
+                {
+                    var line = pushCommand.LineContent;
+                    var lineComponents = pushCommand.LineContent.Split(' ');
                     
-                    var trimmedLine = TrimLine(line);
-                    if (string.IsNullOrWhiteSpace(trimmedLine))
+                    if (lineComponents.Length != 3)
                     {
-                        continue;
+                        throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
                     }
-                    
-                    var lineComponents = trimmedLine.Split(' ');
         
+                    if (uint.TryParse(lineComponents[2], out var index))
+                    {
+                        output += WritePush(lineComponents[1], index, lineNumber, line);
+                    }
+                    else
+                    {
+                        throw new TranslationException(lineNumber, line,
+                            "expected Push SEGMENT INDEX, where INDEX is positive integer");
+                    }
+        
+                    break;
+                }
+
+                case PopCommand popCommand:
+                {
+                    var line = popCommand.LineContent;
+                    var lineComponents = popCommand.LineContent.Split(' ');
+                    
+                    if (lineComponents.Length != 3)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
+                    }
+        
+                    if (UInt16.TryParse(lineComponents[2], out var index))
+                    {
+                        output += WritePop(lineComponents[1], index, lineNumber, line, 0);
+                    }
+                    else
+                    {
+                        throw new TranslationException(lineNumber, line,
+                            "expected Pop SEGMENT INDEX, where INDEX is positive integer");
+                    }
+        
+                    break;
+                }
+
+                case ArithmeticCommand arithmeticCommand:
+                {
+                    var lineComponents = arithmeticCommand.LineContent.Split(' ');
+                    
                     switch (lineComponents[0])
                     {
-                        case "push":
-                        {
-                            if (lineComponents.Length != 3)
-                            {
-                                throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
-                            }
-        
-                            if (uint.TryParse(lineComponents[2], out var index))
-                            {
-                                output += WritePush(lineComponents[1], index, lineNumber, line);
-                            }
-                            else
-                            {
-                                throw new TranslationException(lineNumber, line,
-                                    "expected Push SEGMENT INDEX, where INDEX is positive integer");
-                            }
-        
-                            break;
-                        }
-                        case "pop":
-                        {
-                            if (lineComponents.Length != 3)
-                            {
-                                throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
-                            }
-        
-                            if (UInt16.TryParse(lineComponents[2], out var index))
-                            {
-                                output += WritePop(lineComponents[1], index, lineNumber, line, 0);
-                            }
-                            else
-                            {
-                                throw new TranslationException(lineNumber, line,
-                                    "expected Pop SEGMENT INDEX, where INDEX is positive integer");
-                            }
-        
-                            break;
-                        }
                         case "add":
                             output += WriteBinaryOperator("+", "Add", "+");
                             break;
@@ -128,59 +129,87 @@ public static class VmTranslator
                         case "gt":
                             output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
                             break;
-        
-                        case "label":
-                        {
-                            if (lineComponents.Length != 2)
-                            {
-                                throw new TranslationException(lineNumber, line, "expected label SYMBOL");
-                            }
-        
-                            var label = lineComponents[1];
-                            output += WriteLabel(className, functionName, label);
-        
-                            break;
-                        }
-                        case "if-goto":
-                        {
-                            if (lineComponents.Length != 2)
-                            {
-                                throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
-                            }
-        
-                            var label = lineComponents[1];
-                            output += WriteIfGoto(className, functionName, label);
-        
-                            break;
-                        }
-                        case "goto":
-                        {
-                            if (lineComponents.Length != 2)
-                            {
-                                throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
-                            }
-        
-                            var label = lineComponents[1];
-                            output += WriteGoto(className, functionName, label);
-        
-                            break;
-                        }
-                        case "return":
-                        {
-                            output += WriteReturn();
-        
-                            break;
-                        }
+                        
                         default:
-                            output += trimmedLine + Environment.NewLine;
-                            break;
+                            throw new InvalidOperationException("Should not be reachable");
                     }
                     
                     break;
+                }
+
+                case LabelCommand labelCommand:
+                {
+                    var line = labelCommand.LineContent;
+                    var lineComponents = labelCommand.LineContent.Split(' ');
+
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected label SYMBOL");
+                    }
+        
+                    var label = lineComponents[1];
+                    output += WriteLabel(className, functionName, label);
+        
+                    break;
+                }
+
+                case IfGotoCommand ifGotoCommand:
+                {
+                    var line = ifGotoCommand.LineContent;
+                    var lineComponents = ifGotoCommand.LineContent.Split(' ');
+                    
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
+                    }
+        
+                    var label = lineComponents[1];
+                    output += WriteIfGoto(className, functionName, label);
+        
+                    break;
+                }
+                    
+                case GotoCommand gotoCommand:
+                {
+                    var line = gotoCommand.LineContent;
+                    var lineComponents = gotoCommand.LineContent.Split(' ');
+                    
+                    if (lineComponents.Length != 2)
+                    {
+                        throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
+                    }
+        
+                    var label = lineComponents[1];
+                    output += WriteGoto(className, functionName, label);
+        
+                    break;
+                }
+
+                case ReturnCommand:
+                    output += WriteReturn();
+                    break;
+
+                case FunctionDeclarationCommand functionDeclarationCommand:
+                {
+                    var line = functionDeclarationCommand.LineContent;
+                    output += line + Environment.NewLine;
+                    break;
+                }
+                    
+                case FunctionCallCommand functionCallCommand:
+                {
+                    var line = functionCallCommand.LineContent;
+                    output += line + Environment.NewLine;
+                    break;
+                }
+                
+                case NonCommand:
+                    // Do Nothing
+                    break;
+                
                 default:
-                    throw new NotImplementedException();
+                    throw new InvalidOperationException("Should not be reachable");
             }
-            
         }
 
         output += WriteFooter();
@@ -188,22 +217,6 @@ public static class VmTranslator
         return new OutputFileInfo(outputFileName, "asm", output);
     }
     
-    private static string TrimLine(string line)
-    {
-        if (line.Contains("//"))
-        {
-            var commentStart = line.IndexOf("//", StringComparison.OrdinalIgnoreCase);
-            var trimmedLine = commentStart == 0
-                ? ""
-                : line.Substring(0, commentStart).Trim();
-            return trimmedLine;
-        }
-        else
-        {
-            return line.Trim();
-        }
-    }
-
     private static string WriteHeader() =>
         OpenSectionComment("Reusable Sub Routines", 0) +
         UnconditionalJump(SkipSubsLabel, 1) +

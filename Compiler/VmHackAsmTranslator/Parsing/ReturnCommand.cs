@@ -2,10 +2,7 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class ReturnCommand : ICommand
 {
-    public ReturnCommand(string lineContent)
+    public ReturnCommand()
     {
-        LineContent = lineContent;
     }
-
-    public readonly string LineContent;
 }
