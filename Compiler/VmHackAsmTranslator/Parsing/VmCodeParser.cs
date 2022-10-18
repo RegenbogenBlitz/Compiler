@@ -42,11 +42,37 @@ public static class VmCodeParser
         switch (lineComponents[0])
         {
             case "push":
-                return new PushCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 3)
+                {
+                    throw new TranslationException(lineNumber, line, "expected 'push SEGMENT INDEX'");
+                }
+        
+                if (!uint.TryParse(lineComponents[2], out var index))
+                {
+                    throw new ParserException(lineNumber, line,
+                        "expected 'push SEGMENT INDEX', where INDEX is positive integer");
+                }
+                
+                return new PushCommand(lineComponents[1], index, line);
+            }
 
             case "pop":
-                return new PopCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 3)
+                {
+                    throw new TranslationException(lineNumber, line, "expected 'pop SEGMENT INDEX'");
+                }
 
+                if (!uint.TryParse(lineComponents[2], out var index))
+                {
+                    throw new ParserException(lineNumber, line,
+                        "expected 'pop SEGMENT INDEX', where INDEX is positive integer");
+                }
+
+                return new PopCommand(lineComponents[1], index, line);
+            }
+            
             case "add":
             case "sub":
             case "neg":
@@ -77,7 +103,7 @@ public static class VmCodeParser
                 return new FunctionCallCommand(trimmedLine);
 
             default:
-                throw new TranslationException(
+                throw new ParserException(
                     lineNumber, 
                     line, 
                     "Expected command to start with " +

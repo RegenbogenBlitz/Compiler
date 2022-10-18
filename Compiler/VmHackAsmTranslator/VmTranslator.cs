@@ -43,50 +43,12 @@ public static class VmTranslator
             switch (command)
             {
                 case PushCommand pushCommand:
-                {
-                    var line = pushCommand.LineContent;
-                    var lineComponents = pushCommand.LineContent.Split(' ');
-                    
-                    if (lineComponents.Length != 3)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected Push SEGMENT INDEX");
-                    }
-        
-                    if (uint.TryParse(lineComponents[2], out var index))
-                    {
-                        output += WritePush(lineComponents[1], index, lineNumber, line);
-                    }
-                    else
-                    {
-                        throw new TranslationException(lineNumber, line,
-                            "expected Push SEGMENT INDEX, where INDEX is positive integer");
-                    }
-        
+                    output += WritePush(pushCommand.Segment, pushCommand.Index, lineNumber, pushCommand.LineContent);
                     break;
-                }
 
                 case PopCommand popCommand:
-                {
-                    var line = popCommand.LineContent;
-                    var lineComponents = popCommand.LineContent.Split(' ');
-                    
-                    if (lineComponents.Length != 3)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected Pop SEGMENT INDEX");
-                    }
-        
-                    if (UInt16.TryParse(lineComponents[2], out var index))
-                    {
-                        output += WritePop(lineComponents[1], index, lineNumber, line, 0);
-                    }
-                    else
-                    {
-                        throw new TranslationException(lineNumber, line,
-                            "expected Pop SEGMENT INDEX, where INDEX is positive integer");
-                    }
-        
+                    output += WritePop(popCommand.Segment, popCommand.Index, lineNumber, popCommand.LineContent, 0);
                     break;
-                }
 
                 case ArithmeticCommand arithmeticCommand:
                 {
@@ -403,7 +365,7 @@ public static class VmTranslator
         }
     }
 
-    private static string WritePop(string segment, UInt16 index, int lineNumber, string line, int indentation)
+    private static string WritePop(string segment, uint index, int lineNumber, string line, int indentation)
     {
         switch (segment)
         {
@@ -607,23 +569,18 @@ public static class VmTranslator
         PadLine("A=M") + Comment($"{commentMemoryAddress} => A", indentation) +
         PadLine("M=D") + Comment($"D => {commentMemoryAddress}", indentation);
 
-    private static string OffsetMemoryToMemory(string fromMemoryAddress, string commentFromMemoryAddress, int index,
-        string toMemoryAddress, int indentation)
+    private static string OffsetMemoryToMemory(
+        string fromMemoryAddress,
+        string commentFromMemoryAddress,
+        uint index,
+        string toMemoryAddress,
+        int indentation)
     {
         if (index == 0)
         {
             return
                 AInstruction(fromMemoryAddress) +
                 PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
-                DToMemory(toMemoryAddress, indentation);
-        }
-        else if (index < 0)
-        {
-            return
-                AInstruction(fromMemoryAddress) +
-                PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
-                AInstruction((-index).ToString()) +
-                PadLine("D=D-A") + Comment($"M[{commentFromMemoryAddress}] + {index} => D", indentation) +
                 DToMemory(toMemoryAddress, indentation);
         }
         else
