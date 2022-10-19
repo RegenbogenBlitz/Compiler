@@ -45,7 +45,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 3)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'push SEGMENT INDEX'");
+                    throw new ParserException(lineNumber, line, "expected 'push SEGMENT INDEX'");
                 }
         
                 if (!uint.TryParse(lineComponents[2], out var index))
@@ -53,15 +53,31 @@ public static class VmCodeParser
                     throw new ParserException(lineNumber, line,
                         "expected 'push SEGMENT INDEX', where INDEX is positive integer");
                 }
+
+                var segment = lineComponents[1] switch
+                {
+                    "argument" => SegmentType.Argument,
+                    "local" => SegmentType.Local,
+                    "static" => SegmentType.Static,
+                    "constant" => SegmentType.Constant,
+                    "this" => SegmentType.This,
+                    "that" => SegmentType.That,
+                    "pointer" => SegmentType.Pointer,
+                    "temp" => SegmentType.Temp,
+                    _ => throw new ParserException(
+                        lineNumber,
+                        line,
+                        "expected 'push SEGMENT INDEX', where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}")
+                };
                 
-                return new PushCommand(lineComponents[1], index, line);
+                return new PushCommand(segment, index, line);
             }
 
             case "pop":
             {
                 if (lineComponents.Length != 3)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'pop SEGMENT INDEX'");
+                    throw new ParserException(lineNumber, line, "expected 'pop SEGMENT INDEX'");
                 }
 
                 if (!uint.TryParse(lineComponents[2], out var index))
@@ -70,7 +86,22 @@ public static class VmCodeParser
                         "expected 'pop SEGMENT INDEX', where INDEX is positive integer");
                 }
 
-                return new PopCommand(lineComponents[1], index, line);
+                var segment = lineComponents[1] switch
+                {
+                    "argument" => SegmentType.Argument,
+                    "local" => SegmentType.Local,
+                    "static" => SegmentType.Static,
+                    "this" => SegmentType.This,
+                    "that" => SegmentType.That,
+                    "pointer" => SegmentType.Pointer,
+                    "temp" => SegmentType.Temp,
+                    _ => throw new ParserException(
+                        lineNumber,
+                        line,
+                        "expected 'pop SEGMENT INDEX', where SEGMENT is in {argument, local, static, this, that, pointer, temp}")
+                };
+                
+                return new PopCommand(segment, index, line);
             }
             
             case "add":

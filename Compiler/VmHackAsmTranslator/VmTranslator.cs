@@ -43,11 +43,11 @@ public static class VmTranslator
             switch (command)
             {
                 case PushCommand pushCommand:
-                    output += WritePush(pushCommand.Segment, pushCommand.Index, lineNumber, pushCommand.LineContent);
+                    output += WritePush(pushCommand.Segment, pushCommand.Index);
                     break;
 
                 case PopCommand popCommand:
-                    output += WritePop(popCommand.Segment, popCommand.Index, lineNumber, popCommand.LineContent, 0);
+                    output += WritePop(popCommand.Segment, popCommand.Index, 0);
                     break;
 
                 case ArithmeticCommand arithmeticCommand:
@@ -243,7 +243,7 @@ public static class VmTranslator
         CloseSectionComment(2) +
 
         OpenSectionComment("*ARG = pop()", 2) +
-        WritePop("argument", 0, 0, "", 3) +
+        WritePop(SegmentType.Argument, 0, 3) +
         CloseSectionComment(2) +
 
         OpenSectionComment("SP = ARG + 1", 2) +
@@ -293,53 +293,53 @@ public static class VmTranslator
         WriteLabel("END") +
         UnconditionalJump("END", 0);
     
-    private static string WritePush(string segment, uint index, int lineNumber, string line)
+    private static string WritePush(SegmentType segment, uint index)
     {
         switch (segment)
         {
-            case "argument":
+            case SegmentType.Argument:
                 return
                     OpenSectionComment($"Push M[M[Argument] + {index}]", 0) +
                     IndirectMemoryToD("ARG", index, "Argument", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "local":
+            case SegmentType.Local:
                 return
                     OpenSectionComment($"Push M[M[Local] + {index}]", 0) +
                     IndirectMemoryToD("LCL", index, "Local", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "static":
+            case SegmentType.Static:
                 return
                     OpenSectionComment($"Push M[Static {index}]", 0) +
                     MemoryToD($"StaticTest.{index}", $"M[M[Static {index}]]", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "constant":
+            case SegmentType.Constant:
                 return
                     OpenSectionComment($"Push Constant '{index}'", 0) +
                     ValueToD(index.ToString(), 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "this":
+            case SegmentType.This:
                 return
                     OpenSectionComment($"Push M[M[This] + {index}]", 0) +
                     IndirectMemoryToD("THIS", index, "This", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "that":
+            case SegmentType.That:
                 return
                     OpenSectionComment($"Push M[M[That] + {index}]", 0) +
                     IndirectMemoryToD("THAT", index, "That", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "pointer":
+            case SegmentType.Pointer:
                 var pointerAddress = BasePointerAddress + index;
                 
                 return
@@ -348,7 +348,7 @@ public static class VmTranslator
                     PushD(1) +
                     CloseSectionComment(0);
             
-            case "temp":
+            case SegmentType.Temp:
                 var tempAddress = BaseTempAddress + index;
                 
                 return
@@ -358,18 +358,15 @@ public static class VmTranslator
                     CloseSectionComment(0);
             
             default:
-                throw new TranslationException(
-                    lineNumber,
-                    line,
-             "expected Push SEGMENT INDEX, where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}");
+                throw new InvalidOperationException("Should not be reachable");
         }
     }
 
-    private static string WritePop(string segment, uint index, int lineNumber, string line, int indentation)
+    private static string WritePop(SegmentType segment, uint index, int indentation)
     {
         switch (segment)
         {
-            case "argument":
+            case SegmentType.Argument:
                 return
                     OpenSectionComment($"Pop M[M[Argument] + {index}]", indentation) +
                     OffsetMemoryToMemory("ARG", "Argument", index, "R13", indentation + 1) +
@@ -378,7 +375,7 @@ public static class VmTranslator
                     DToIndirectMemory("R13", $"M[Argument] + {index}", indentation + 1) +
                     CloseSectionComment(indentation);
             
-            case "local":
+            case SegmentType.Local:
                 return
                     OpenSectionComment($"Pop M[M[Local] + {index}]", indentation) +
                     OffsetMemoryToMemory("LCL", "Local", index, "R13", indentation + 1) +
@@ -387,7 +384,7 @@ public static class VmTranslator
                     DToIndirectMemory("R13", $"M[Local] + {index}", indentation + 1) +
                     CloseSectionComment(indentation);
             
-            case "static":
+            case SegmentType.Static:
                 return
                     OpenSectionComment($"Pop M[Static {index}]", indentation) +
                     DropStack(indentation + 1) +
@@ -396,7 +393,7 @@ public static class VmTranslator
                     PadLine("M=D") + Comment($"D => M[Static {index}]", indentation + 1) +
                     CloseSectionComment(indentation);
             
-            case "this":
+            case SegmentType.This:
                 return
                     OpenSectionComment($"Pop M[M[This] + {index}]", indentation) +
                     OffsetMemoryToMemory("THIS", "This", index, "R13", indentation + 1) +
@@ -405,7 +402,7 @@ public static class VmTranslator
                     DToIndirectMemory("R13", $"M[This] + {index}", indentation + 1) +
                     CloseSectionComment(indentation);
             
-            case "that":
+            case SegmentType.That:
                 return
                     OpenSectionComment($"Pop M[M[That] + {index}]", indentation) +
                     OffsetMemoryToMemory("THAT", "That", index, "R13", indentation + 1) +
@@ -414,7 +411,7 @@ public static class VmTranslator
                     DToIndirectMemory("R13", $"M[That] + {index}", indentation + 1) +
                     CloseSectionComment(indentation);
 
-            case "pointer":
+            case SegmentType.Pointer:
             {
                 var pointerAddress = BasePointerAddress + index;
                 var memoryAddressComment = $"pointer + {index}";
@@ -428,7 +425,7 @@ public static class VmTranslator
                     CloseSectionComment(indentation);
             }
 
-            case "temp":
+            case SegmentType.Temp:
             {
                 var tempAddress = BaseTempAddress + index;
                 var memoryAddressComment = $"temp + {index}";
@@ -441,12 +438,9 @@ public static class VmTranslator
                     CloseSectionComment(indentation);
             }
             // ReSharper disable once RedundantCaseLabel
-            case "constant":
+            case SegmentType.Constant:
             default:
-                throw new TranslationException(
-                    lineNumber,
-                    line,
-                    "expected Pop SEGMENT INDEX, where SEGMENT is in {argument, local, static, this, that, pointer, temp}");
+                throw new InvalidOperationException("Should not be reachable");
         }
     }
     
