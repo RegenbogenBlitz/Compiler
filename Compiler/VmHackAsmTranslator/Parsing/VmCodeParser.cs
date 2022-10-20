@@ -116,8 +116,16 @@ public static class VmCodeParser
                 return new ArithmeticCommand(trimmedLine);
 
             case "label":
-                return new LabelCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 2)
+                {
+                    throw new TranslationException(lineNumber, line, "expected label SYMBOL");
+                }
 
+                var symbol = lineComponents[1];
+                return new LabelCommand(symbol);
+            }
+            
             case "if-goto":
                 return new IfGotoCommand(trimmedLine);
 

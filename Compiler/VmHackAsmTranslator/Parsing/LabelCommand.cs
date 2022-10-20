@@ -2,10 +2,10 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class LabelCommand : ICommand
 {
-    public LabelCommand(string lineContent)
+    public LabelCommand(string symbol)
     {
-        LineContent = lineContent;
+        Symbol = symbol;
     }
 
-    public readonly string LineContent;
+    public readonly string Symbol;
 }

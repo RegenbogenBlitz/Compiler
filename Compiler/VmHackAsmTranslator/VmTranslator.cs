@@ -100,20 +100,8 @@ public static class VmTranslator
                 }
 
                 case LabelCommand labelCommand:
-                {
-                    var line = labelCommand.LineContent;
-                    var lineComponents = labelCommand.LineContent.Split(' ');
-
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected label SYMBOL");
-                    }
-        
-                    var label = lineComponents[1];
-                    output += WriteLabel(className, functionName, label);
-        
+                    output += WriteLabel(className, functionName, labelCommand.Symbol);
                     break;
-                }
 
                 case IfGotoCommand ifGotoCommand:
                 {
