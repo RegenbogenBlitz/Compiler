@@ -32,14 +32,10 @@ public static class VmTranslator
         
         var output = WriteHeader();
 
-        var lineNumber = 0;
-
         const string className = "dummyClass";
         const string functionName = "dummyFunction";
         foreach (var command in vmCode.Commands)
         {
-            lineNumber++;
-            
             switch (command)
             {
                 case PushCommand pushCommand:
@@ -104,36 +100,12 @@ public static class VmTranslator
                     break;
 
                 case IfGotoCommand ifGotoCommand:
-                {
-                    var line = ifGotoCommand.LineContent;
-                    var lineComponents = ifGotoCommand.LineContent.Split(' ');
-                    
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
-                    }
-        
-                    var label = lineComponents[1];
-                    output += WriteIfGoto(className, functionName, label);
-        
+                    output += WriteIfGoto(className, functionName, ifGotoCommand.Symbol);
                     break;
-                }
                     
                 case GotoCommand gotoCommand:
-                {
-                    var line = gotoCommand.LineContent;
-                    var lineComponents = gotoCommand.LineContent.Split(' ');
-                    
-                    if (lineComponents.Length != 2)
-                    {
-                        throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
-                    }
-        
-                    var label = lineComponents[1];
-                    output += WriteGoto(className, functionName, label);
-        
+                    output += WriteGoto(className, functionName, gotoCommand.Symbol);
                     break;
-                }
 
                 case ReturnCommand:
                     output += WriteReturn();

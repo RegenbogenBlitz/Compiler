@@ -2,10 +2,10 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class GotoCommand : ICommand
 {
-    public GotoCommand(string lineContent)
+    public GotoCommand(string symbol)
     {
-        LineContent = lineContent;
+        Symbol = symbol;
     }
 
-    public readonly string LineContent;
+    public readonly string Symbol;
 }

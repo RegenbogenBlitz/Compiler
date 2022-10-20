@@ -127,11 +127,28 @@ public static class VmCodeParser
             }
             
             case "if-goto":
-                return new IfGotoCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 2)
+                {
+                    throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
+                }
+        
+                var symbol = lineComponents[1];
+                return new IfGotoCommand(symbol);
+            }
+                
 
             case "goto":
-                return new GotoCommand(trimmedLine);
-
+            {
+                if (lineComponents.Length != 2)
+                {
+                    throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
+                }
+        
+                var symbol = lineComponents[1];
+                return new GotoCommand(symbol);
+            }
+            
             case "return":
                 return new ReturnCommand();
             
