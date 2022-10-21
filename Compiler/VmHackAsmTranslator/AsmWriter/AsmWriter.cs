@@ -241,11 +241,41 @@ public static class AsmWriter
 
         CloseSectionComment(1) +
 
+        OpenSectionComment("Call Function", 1) +
+        WriteLabel(CallSubLabel) +
+        PushD(2) +
+        AInstruction("LCL") +
+        PadLine("D=M") + Comment("M[LCL] => D ", 2) +
+        PushD(2) +
+        AInstruction("ARG") +
+        PadLine("D=M") + Comment("M[ARG] => D ", 2) +
+        PushD(2) +
+        AInstruction("THIS") +
+        PadLine("D=M") + Comment("M[THIS] => D ", 2) +
+        PushD(2) +
+        AInstruction("THAT") +
+        PadLine("D=M") + Comment("M[THAT] => D ", 2) +
+        PushD(2) +
+        AInstruction("R15") +
+        PadLine("D=M") + Comment("M[R15] => D ", 2) +
+        AInstruction("5") +
+        PadLine("D=D+A") + Comment("D = #arguments + 5", 2) +
+        AInstruction("SP") +
+        PadLine("D=M-D") + Comment("D = SP - #arguments - 5", 2) +
+        DToMemory("ARG", 2) +
+        AInstruction("SP") +
+        PadLine("D=M") + Comment("M[SP] => D ", 2) +
+        DToMemory("LCL", 2) +
+        OpenSectionComment("Goto function address", 2) +
+        UnconditionalJumpToAddressInMemory("R14", 3) +
+        CloseSectionComment(2) +
+        CloseSectionComment(1) +
+
         WriteLabel(SkipSubsLabel) +
         CloseSectionComment(0) +
 
         SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0) +
-        
+
         WriteFunctionCall("Sys.init", 0) +
         WriteLabel("END") +
         UnconditionalJump("END", 0);
