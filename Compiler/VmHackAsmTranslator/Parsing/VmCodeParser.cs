@@ -30,17 +30,18 @@ public class VmCodeParser
         var lineNumber = (uint)0;
         var commands = new List<(LineInfo lineInfo, ICommand command)>();
 
+        var functionName = string.Empty;
         foreach (var lineContent in inputFile.Content)
         {
             lineNumber++;
             var lineInfo = new LineInfo(inputFile.FileName, lineNumber, lineContent);
-            commands.Add((lineInfo, ParseLine(lineInfo)));
+            commands.Add((lineInfo, ParseLine(lineInfo, ref functionName)));
         }
 
         return commands;
     }
     
-    private ICommand ParseLine(LineInfo lineInfo)
+    private ICommand ParseLine(LineInfo lineInfo, ref string functionName)
     {
         var trimmedLine = TrimLine(lineInfo.OriginalLine);
         if (string.IsNullOrWhiteSpace(trimmedLine))
@@ -145,7 +146,7 @@ public class VmCodeParser
                 }
 
                 var symbol = lineComponents[1];
-                return new LabelCommand(symbol);
+                return new LabelCommand(functionName, symbol);
             }
             
             case "if-goto":
@@ -156,7 +157,7 @@ public class VmCodeParser
                 }
         
                 var symbol = lineComponents[1];
-                return new IfGotoCommand(symbol);
+                return new IfGotoCommand(functionName, symbol);
             }
                 
 
@@ -168,7 +169,7 @@ public class VmCodeParser
                 }
         
                 var symbol = lineComponents[1];
-                return new GotoCommand(symbol);
+                return new GotoCommand(functionName, symbol);
             }
             
             case "return":
@@ -188,7 +189,7 @@ public class VmCodeParser
                         "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS', where NUMBER_OF_LOCALS is positive integer");
                 }
                 
-                var functionName = lineComponents[1];
+                functionName = lineComponents[1];
                 return new FunctionDeclarationCommand(functionName, numLocals);
             }
                 
@@ -207,8 +208,8 @@ public class VmCodeParser
                         "expected 'call FUNCTION_NAME NUMBER_OF_ARGUMENTS', where NUMBER_OF_ARGUMENTS is positive integer");
                 }
                 
-                var functionName = lineComponents[1];
-                return new FunctionCallCommand(functionName, numArguments);
+                var calledFunctionName = lineComponents[1];
+                return new FunctionCallCommand(calledFunctionName, numArguments);
             }
 
             default:

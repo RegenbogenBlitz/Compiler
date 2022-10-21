@@ -33,7 +33,6 @@ public static class AsmWriter
     {
         var output = WriteHeader();
 
-        const string functionName = "dummyClass.dummyFunction";
         foreach (var command in vmCode.Commands)
         {
             switch (command)
@@ -94,15 +93,15 @@ public static class AsmWriter
                 }
 
                 case LabelCommand labelCommand:
-                    output += WriteFunctionQualifiedLabel(functionName, labelCommand.Symbol);
+                    output += WriteFunctionQualifiedLabel(labelCommand.FunctionName, labelCommand.Symbol);
                     break;
 
                 case IfGotoCommand ifGotoCommand:
-                    output += WriteIfGoto(functionName, ifGotoCommand.Symbol);
+                    output += WriteIfGoto(ifGotoCommand.FunctionName, ifGotoCommand.Symbol);
                     break;
                     
                 case GotoCommand gotoCommand:
-                    output += WriteGoto(functionName, gotoCommand.Symbol);
+                    output += WriteGoto(gotoCommand.FunctionName, gotoCommand.Symbol);
                     break;
 
                 case ReturnCommand:
