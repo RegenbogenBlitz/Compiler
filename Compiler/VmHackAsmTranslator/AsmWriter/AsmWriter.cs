@@ -1,9 +1,9 @@
 using FileHandling;
 using VmHackAsmTranslator.Parsing;
 
-namespace VmHackAsmTranslator;
+namespace VmHackAsmTranslator.AsmWriter;
 
-public static class VmTranslator
+public static class AsmWriter
 {
     private const int BasePointerAddress = 3;
     private const int BaseTempAddress = 5;
@@ -26,10 +26,8 @@ public static class VmTranslator
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static int _returnLabelNum = 0;
         
-    public static OutputFileInfo Translate(string outputFileName, IEnumerable<InputFileInfo> inputFileInfos)
+    public static OutputFileInfo Write(string outputFileName, VmCode vmCode)
     {
-        var vmCode = VmCodeParser.Parse(inputFileInfos);
-        
         var output = WriteHeader();
 
         const string functionName = "dummyClass.dummyFunction";

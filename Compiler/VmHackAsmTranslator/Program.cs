@@ -1,5 +1,5 @@
 ﻿using FileHandling;
-using VmHackAsmTranslator;
+using VmHackAsmTranslator.AsmWriter;
 using VmHackAsmTranslator.Parsing;
 
 const string inputFileExtension = ".vm";
@@ -17,17 +17,14 @@ var inputFilesContent =
 try
 {
     var directory = new DirectoryInfo(folderParent);
-    var outputFileInfo = VmTranslator.Translate(directory.Name, inputFilesContent);
+    var vmCode = VmCodeParser.Parse(inputFilesContent);
+    var outputFileInfo = AsmWriter.Write(directory.Name, vmCode);
 
     OutputFileHandler.WriteOutputFileContent(
         folderParent,
         new[] { outputFileInfo });
 }
 catch (ParserException ex)
-{
-    Console.Error.WriteLine(ex.Message);
-}
-catch (TranslationException ex)
 {
     Console.Error.WriteLine(ex.Message);
 }
