@@ -17,17 +17,19 @@ public static class AsmWriter
     private const string EqualsSubLabel = "EQUALS_SUB";
     private const string LessThanSubLabel = "LESSTHAN_SUB";
     private const string GreaterThanSubLabel = "GREATERTHAN_SUB";
+    
     private const string EqualsReturnLabel = "EQUALS_RETURN_";
     private const string LessThanReturnLabel = "LESSTHAN_RETURN_";
     private const string GreaterThanReturnLabel = "GREATERTHAN_RETURN_";
+    // ReSharper disable once RedundantDefaultMemberInitializer
+    private static int _comparisionReturnLabelNum = 0;
     
     private const string CallSubLabel = "CALL_SUB";
     private const string ReturnSubLabel = "RETURN_SUB";
     
-    private const string ReturnAddressLabel = "RETURN_ADDRESS";
-    
+    private const string ReturnAddressLabel = "RETURN_ADDRESS_";
     // ReSharper disable once RedundantDefaultMemberInitializer
-    private static int _returnLabelNum = 0;
+    private static int _functionReturnLabelNum = 0;
         
     public static OutputFileInfo Write(string outputFileName, VmCode vmCode)
     {
@@ -130,8 +132,6 @@ public static class AsmWriter
                     throw new InvalidOperationException("Should not be reachable");
             }
         }
-
-        output += WriteFooter();
         
         return new OutputFileInfo(outputFileName, "asm", output);
     }
@@ -244,9 +244,9 @@ public static class AsmWriter
         WriteLabel(SkipSubsLabel) +
         CloseSectionComment(0) +
 
-        SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0);
-    
-    private static string WriteFooter() =>
+        SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0) +
+        
+        WriteFunctionCall("Sys.init", 0) +
         WriteLabel("END") +
         UnconditionalJump("END", 0);
     
@@ -416,7 +416,7 @@ public static class AsmWriter
     
     private static string WriteComparison(string operatorName, string returnLabel, string subLabel)
     {
-        var label = returnLabel + _returnLabelNum;
+        var label = returnLabel + _comparisionReturnLabelNum;
         var equalsSection =
             OpenSectionComment(operatorName, 0) +
             OpenSectionComment($"Set R14 to '{label}'", 1) +
@@ -427,7 +427,7 @@ public static class AsmWriter
             WriteLabel(label) +
             CloseSectionComment(0);
 
-        _returnLabelNum++;
+        _comparisionReturnLabelNum++;
         return equalsSection;
     }
 
@@ -462,7 +462,7 @@ public static class AsmWriter
 
     private static string WriteFunctionCall(string functionName, uint numArguments)
     {
-        var label = $"{ReturnAddressLabel}_{_returnLabelNum}";
+        var label = ReturnAddressLabel + _functionReturnLabelNum;
         string escapedFunctionName = "$" + functionName;
         var code =
             CommentLine($"[Call Function:{functionName} Args:{numArguments}] {{", 0) +
@@ -477,7 +477,7 @@ public static class AsmWriter
             UnconditionalJump(CallSubLabel, 1) +
             WriteLabel(label) +
             CloseSectionComment(0);
-        _returnLabelNum++;
+        _functionReturnLabelNum++;
         return code;
     }
 
