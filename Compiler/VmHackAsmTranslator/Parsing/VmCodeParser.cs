@@ -174,7 +174,8 @@ public class VmCodeParser
             case "return":
                 return new ReturnCommand();
             
-            case "function":{
+            case "function":
+            {
                 if (lineComponents.Length != 3)
                 {
                     throw new ParserException(lineInfo, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
@@ -193,7 +194,22 @@ public class VmCodeParser
                 
             
             case "call":
-                return new FunctionCallCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 3)
+                {
+                    throw new ParserException(lineInfo, "expected 'call FUNCTION_NAME NUMBER_OF_ARGUMENTS'");
+                }
+                
+                if (!uint.TryParse(lineComponents[2], out var numArguments))
+                {
+                    throw new ParserException(
+                        lineInfo,
+                        "expected 'call FUNCTION_NAME NUMBER_OF_ARGUMENTS', where NUMBER_OF_ARGUMENTS is positive integer");
+                }
+                
+                var functionName = lineComponents[1];
+                return new FunctionCallCommand(functionName, numArguments);
+            }
 
             default:
                 throw new ParserException(lineInfo,

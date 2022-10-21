@@ -21,7 +21,10 @@ public static class AsmWriter
     private const string LessThanReturnLabel = "LESSTHAN_RETURN_";
     private const string GreaterThanReturnLabel = "GREATERTHAN_RETURN_";
     
+    private const string CallSubLabel = "CALL_SUB";
     private const string ReturnSubLabel = "RETURN_SUB";
+    
+    private const string ReturnAddressLabel = "RETURN_ADDRESS";
     
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static int _returnLabelNum = 0;
@@ -114,8 +117,9 @@ public static class AsmWriter
                     
                 case FunctionCallCommand functionCallCommand:
                 {
-                    var line = functionCallCommand.LineContent;
-                    output += line + Environment.NewLine;
+                    output += WriteFunctionCall(
+                        functionCallCommand.FunctionName,
+                        functionCallCommand.NumArguments);
                     break;
                 }
                 
@@ -447,16 +451,37 @@ public static class AsmWriter
     
     private static string WriteFunctionDeclaration(string functionName, uint numLocals)
     {
-        var code = CommentLine($"[Declare Function:{functionName} Locals:{numLocals}] {{", 0);
-            code +=WriteLabel("$" + functionName);
+        var code = OpenSectionComment($"Declare Function:{functionName} Locals:{numLocals}", 0);
+        code += WriteLabel("$" + functionName);
         for (var i = 0; i < numLocals; i++)
         {
             code += WritePush(SegmentType.Constant, 0);
         }
-
+        code += CloseSectionComment(0);
         return code;
     }
-    
+
+    private static string WriteFunctionCall(string functionName, uint numArguments)
+    {
+        var label = $"{ReturnAddressLabel}_{_returnLabelNum}";
+        string escapedFunctionName = "$" + functionName;
+        var code =
+            CommentLine($"[Call Function:{functionName} Args:{numArguments}] {{", 0) +
+            AInstruction(escapedFunctionName) +
+            PadLine("D=A") + Comment($"{escapedFunctionName}=> D", 1) +
+            DToMemory("R14", 1) +
+            AInstruction(numArguments.ToString()) +
+            PadLine("D=A") + Comment("Number Of Arguments => D", 1) +
+            DToMemory("R15", 1) +
+            AInstruction(label) +
+            PadLine("D=A") + Comment($"{escapedFunctionName}=> D", 1) +
+            UnconditionalJump(CallSubLabel, 1) +
+            WriteLabel(label) +
+            CloseSectionComment(0);
+        _returnLabelNum++;
+        return code;
+    }
+
     private static string WriteFunctionQualifiedLabel(string functionName, string label) =>
         WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label));
     

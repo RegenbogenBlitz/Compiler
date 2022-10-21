@@ -2,10 +2,13 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class FunctionCallCommand : ICommand
 {
-    public FunctionCallCommand(string lineContent)
+    public FunctionCallCommand(string functionName, uint numArguments)
     {
-        LineContent = lineContent;
+        FunctionName = functionName;
+        NumArguments = numArguments;
     }
-
-    public readonly string LineContent;
+    
+    public string FunctionName { get; }
+    
+    public uint NumArguments { get; }
 }
