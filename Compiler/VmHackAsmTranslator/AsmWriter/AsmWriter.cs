@@ -40,11 +40,11 @@ public static class AsmWriter
             switch (command)
             {
                 case PushCommand pushCommand:
-                    output += WritePush(pushCommand.Segment, pushCommand.Index);
+                    output += WritePush(pushCommand.ClassName, pushCommand.Segment, pushCommand.Index);
                     break;
 
                 case PopCommand popCommand:
-                    output += WritePop(popCommand.Segment, popCommand.Index, 0);
+                    output += WritePop(popCommand.ClassName, popCommand.Segment, popCommand.Index, 0);
                     break;
 
                 case ArithmeticCommand arithmeticCommand:
@@ -200,7 +200,7 @@ public static class AsmWriter
         CloseSectionComment(2) +
 
         OpenSectionComment("*ARG = pop()", 2) +
-        WritePop(SegmentType.Argument, 0, 3) +
+        WritePop(string.Empty, SegmentType.Argument, 0, 3) +
         CloseSectionComment(2) +
 
         OpenSectionComment("SP = ARG + 1", 2) +
@@ -280,7 +280,7 @@ public static class AsmWriter
         WriteLabel("END") +
         UnconditionalJump("END", 0);
     
-    private static string WritePush(SegmentType segment, uint index)
+    private static string WritePush(string className, SegmentType segment, uint index)
     {
         switch (segment)
         {
@@ -301,7 +301,7 @@ public static class AsmWriter
             case SegmentType.Static:
                 return
                     OpenSectionComment($"Push M[Static {index}]", 0) +
-                    MemoryToD($"StaticTest.{index}", $"M[M[Static {index}]]", 1) +
+                    MemoryToD($"{className}.{index}", $"M[M[Static {index}]]", 1) +
                     PushD(1) +
                     CloseSectionComment(0);
             
@@ -349,7 +349,7 @@ public static class AsmWriter
         }
     }
 
-    private static string WritePop(SegmentType segment, uint index, int indentation)
+    private static string WritePop(string className, SegmentType segment, uint index, int indentation)
     {
         switch (segment)
         {
@@ -376,7 +376,7 @@ public static class AsmWriter
                     OpenSectionComment($"Pop M[Static {index}]", indentation) +
                     DropStack(indentation + 1) +
                     TopStackToD(indentation + 1) +
-                    AInstruction($"StaticTest.{index}") +
+                    AInstruction($"{className}.{index}") +
                     PadLine("M=D") + Comment($"D => M[Static {index}]", indentation + 1) +
                     CloseSectionComment(indentation);
             

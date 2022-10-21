@@ -119,7 +119,7 @@ public class VmCodeParser
                     _ => throw new ParserException(lineInfo, "expected 'push SEGMENT INDEX', where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}")
                 };
                 
-                return new PushCommand(segment, index);
+                return new PushCommand(lineInfo.FileName, segment, index);
             }
 
             case "pop":
@@ -146,7 +146,7 @@ public class VmCodeParser
                     _ => throw new ParserException(lineInfo, "expected 'pop SEGMENT INDEX', where SEGMENT is in {argument, local, static, this, that, pointer, temp}")
                 };
                 
-                return new PopCommand(segment, index);
+                return new PopCommand(lineInfo.FileName, segment, index);
             }
             
             case "add":
