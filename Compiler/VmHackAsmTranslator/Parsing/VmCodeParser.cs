@@ -113,13 +113,32 @@ public static class VmCodeParser
             case "eq":
             case "lt":
             case "gt":
-                return new ArithmeticCommand(trimmedLine);
+            {
+                if (lineComponents.Length != 1)
+                {
+                    throw new ParserException(lineNumber, line, $"expected '{lineComponents[0]}'");
+                }
 
+                var arithmeticCommandType = lineComponents[0] switch
+                {
+                    "add" => ArithmeticCommandType.Add,
+                    "sub" => ArithmeticCommandType.Sub,
+                    "neg" => ArithmeticCommandType.Neg,
+                    "and" => ArithmeticCommandType.And,
+                    "or" => ArithmeticCommandType.Or,
+                    "not" => ArithmeticCommandType.Not,
+                    "eq" => ArithmeticCommandType.Eq,
+                    "lt" => ArithmeticCommandType.Lt,
+                    "gt" => ArithmeticCommandType.Gt,
+                    _ => throw new InvalidOperationException("Should not be reachable")
+                };
+                return new ArithmeticCommand(arithmeticCommandType);
+            }
             case "label":
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'label SYMBOL'");
+                    throw new ParserException(lineNumber, line, "expected 'label SYMBOL'");
                 }
 
                 var symbol = lineComponents[1];
@@ -130,7 +149,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'if-goto SYMBOL'");
+                    throw new ParserException(lineNumber, line, "expected 'if-goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -142,7 +161,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'goto SYMBOL'");
+                    throw new ParserException(lineNumber, line, "expected 'goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -155,7 +174,7 @@ public static class VmCodeParser
             case "function":{
                 if (lineComponents.Length != 3)
                 {
-                    throw new TranslationException(lineNumber, line, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
+                    throw new ParserException(lineNumber, line, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
                 }
                 
                 if (!uint.TryParse(lineComponents[2], out var numLocals))

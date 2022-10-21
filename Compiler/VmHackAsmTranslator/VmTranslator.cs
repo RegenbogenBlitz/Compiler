@@ -47,43 +47,41 @@ public static class VmTranslator
 
                 case ArithmeticCommand arithmeticCommand:
                 {
-                    var lineComponents = arithmeticCommand.LineContent.Split(' ');
-                    
-                    switch (lineComponents[0])
+                    switch (arithmeticCommand.ArithmeticCommandType)
                     {
-                        case "add":
+                        case ArithmeticCommandType.Add:
                             output += WriteBinaryOperator("+", "Add", "+");
                             break;
                         
-                        case "sub":
+                        case ArithmeticCommandType.Sub:
                             output += WriteBinaryOperator("-", "Subtract", "-");
                             break;
                         
-                        case "neg":
+                        case ArithmeticCommandType.Neg:
                             output += WriteUnaryOperator("-", "Negative", "-");
                             break;
                         
-                        case "and":
+                        case ArithmeticCommandType.And:
                             output += WriteBinaryOperator("&", "And", "and");
                             break;
                         
-                        case "or":
+                        case ArithmeticCommandType.Or:
                             output += WriteBinaryOperator("|", "Or", "or");
                             break;
                         
-                        case "not":
+                        case ArithmeticCommandType.Not:
                             output += WriteUnaryOperator("!", "Not", "not ");
                             break;
                         
-                        case "eq":
+                        case ArithmeticCommandType.Eq:
                             output += WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel);
                             break;
                         
-                        case "lt":
+                        case ArithmeticCommandType.Lt:
                             output += WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel);
                             break;
                         
-                        case "gt":
+                        case ArithmeticCommandType.Gt:
                             output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
                             break;
                         

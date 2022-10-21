@@ -2,10 +2,10 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class ArithmeticCommand : ICommand
 {
-    public ArithmeticCommand(string lineContent)
+    public ArithmeticCommand(ArithmeticCommandType arithmeticCommandType)
     {
-        LineContent = lineContent;
+        ArithmeticCommandType = arithmeticCommandType;
     }
 
-    public readonly string LineContent;
+    public readonly ArithmeticCommandType ArithmeticCommandType;
 }
