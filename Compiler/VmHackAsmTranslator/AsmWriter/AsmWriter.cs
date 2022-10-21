@@ -480,12 +480,19 @@ public static class AsmWriter
     
     private static string WriteFunctionDeclaration(string functionName, uint numLocals)
     {
-        var code = OpenSectionComment($"Declare Function:{functionName} Locals:{numLocals}", 0);
-        code += WriteLabel("$" + functionName);
-        for (var i = 0; i < numLocals; i++)
+        var code =
+            OpenSectionComment($"Declare Function:{functionName} Locals:{numLocals}", 0) +
+            WriteLabel("$" + functionName);
+        
+        if (numLocals > 0)
         {
-            code += WritePush(SegmentType.Constant, 0);
+            code += ValueToD(0.ToString(), 1);
+            for (var i = 0; i < numLocals; i++)
+            {
+                code += PushD(1);
+            }
         }
+        
         code += CloseSectionComment(0);
         return code;
     }
