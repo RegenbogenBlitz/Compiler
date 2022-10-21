@@ -32,8 +32,7 @@ public static class VmTranslator
         
         var output = WriteHeader();
 
-        const string className = "dummyClass";
-        const string functionName = "dummyFunction";
+        const string functionName = "dummyClass.dummyFunction";
         foreach (var command in vmCode.Commands)
         {
             switch (command)
@@ -96,15 +95,15 @@ public static class VmTranslator
                 }
 
                 case LabelCommand labelCommand:
-                    output += WriteLabel(className, functionName, labelCommand.Symbol);
+                    output += WriteFunctionQualifiedLabel(functionName, labelCommand.Symbol);
                     break;
 
                 case IfGotoCommand ifGotoCommand:
-                    output += WriteIfGoto(className, functionName, ifGotoCommand.Symbol);
+                    output += WriteIfGoto(functionName, ifGotoCommand.Symbol);
                     break;
                     
                 case GotoCommand gotoCommand:
-                    output += WriteGoto(className, functionName, gotoCommand.Symbol);
+                    output += WriteGoto(functionName, gotoCommand.Symbol);
                     break;
 
                 case ReturnCommand:
@@ -112,11 +111,10 @@ public static class VmTranslator
                     break;
 
                 case FunctionDeclarationCommand functionDeclarationCommand:
-                {
-                    var line = functionDeclarationCommand.LineContent;
-                    output += line + Environment.NewLine;
+                    output += WriteFunctionDeclaration(
+                        functionDeclarationCommand.FunctionName,
+                        functionDeclarationCommand.NumLocals);
                     break;
-                }
                     
                 case FunctionCallCommand functionCallCommand:
                 {
@@ -138,7 +136,7 @@ public static class VmTranslator
         
         return new OutputFileInfo(outputFileName, "asm", output);
     }
-    
+
     private static string WriteHeader() =>
         OpenSectionComment("Reusable Sub Routines", 0) +
         UnconditionalJump(SkipSubsLabel, 1) +
@@ -191,8 +189,8 @@ public static class VmTranslator
         WriteLabel(ReturnSubLabel) +
 
         OpenSectionComment("FRAME  = LCL", 2) +
-        MemoryToD("LCL", "M[Local]", 3)+
-        DToMemory("R14", 3)+
+        MemoryToD("LCL", "M[Local]", 3) +
+        DToMemory("R14", 3) +
         CloseSectionComment(2) +
 
         OpenSectionComment("RET = *(FRAME-5)", 2) +
@@ -209,7 +207,7 @@ public static class VmTranslator
         OpenSectionComment("SP = ARG + 1", 2) +
         AInstruction("ARG") +
         PadLine("D=M+1") + Comment("M[Argument] + 1 => D", 3) +
-        DToMemory("SP",3) +
+        DToMemory("SP", 3) +
         CloseSectionComment(2) +
 
         OpenSectionComment("That = *(FRAME-1)", 2) +
@@ -434,28 +432,40 @@ public static class VmTranslator
         return equalsSection;
     }
 
-    private static string VmLabelToAsmLabel(string className, string functionName, string label) =>
-        $"{className}.{functionName}${label}";
-    
-    private static string WriteLabel(string className, string functionName, string label) =>
-        $"({VmLabelToAsmLabel(className, functionName, label)})" + Environment.NewLine;
-
-    private static string WriteIfGoto(string className, string functionName, string label) =>
-        OpenSectionComment($"If-Goto {VmLabelToAsmLabel(className, functionName, label)}", 0) +
+    private static string WriteIfGoto(string functionName, string label) =>
+        OpenSectionComment($"If-Goto {ToAsmFunctionQualifiedLabel(functionName, label)}", 0) +
         DropStack(1) +
         TopStackToD(1) +
-        ConditionalJump("JNE", VmLabelToAsmLabel(className, functionName, label), 1) +
+        ConditionalJump("JNE", ToAsmFunctionQualifiedLabel(functionName, label), 1) +
         CloseSectionComment(0);
     
-    private static string WriteGoto(string className, string functionName, string label) =>
-        OpenSectionComment($"Goto {VmLabelToAsmLabel(className, functionName, label)}", 0) +
-        UnconditionalJump(VmLabelToAsmLabel(className, functionName, label), 1) +
+    private static string WriteGoto(string functionName, string label) =>
+        OpenSectionComment($"Goto {ToAsmFunctionQualifiedLabel(functionName, label)}", 0) +
+        UnconditionalJump(ToAsmFunctionQualifiedLabel(functionName, label), 1) +
         CloseSectionComment(0);
     
     private static string WriteReturn() =>
         OpenSectionComment("Return", 0) +
         UnconditionalJump(ReturnSubLabel, 1) +
         CloseSectionComment(0);
+    
+    private static string WriteFunctionDeclaration(string functionName, uint numLocals)
+    {
+        var code = CommentLine($"[Declare Function:{functionName} Locals:{numLocals}] {{", 0);
+            code +=WriteLabel("$" + functionName);
+        for (var i = 0; i < numLocals; i++)
+        {
+            code += WritePush(SegmentType.Constant, 0);
+        }
+
+        return code;
+    }
+    
+    private static string WriteFunctionQualifiedLabel(string functionName, string label) =>
+        WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label));
+    
+    private static string ToAsmFunctionQualifiedLabel(string functionName, string label) =>
+        $"{functionName}${label}";
     
     private static string BinaryOperatorToD(string operatorSymbol, string commentOperator, int indentation) =>
         PopToD(indentation) +

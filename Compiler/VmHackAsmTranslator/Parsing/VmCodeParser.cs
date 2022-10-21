@@ -119,7 +119,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected label SYMBOL");
+                    throw new TranslationException(lineNumber, line, "expected 'label SYMBOL'");
                 }
 
                 var symbol = lineComponents[1];
@@ -130,7 +130,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected if-goto SYMBOL");
+                    throw new TranslationException(lineNumber, line, "expected 'if-goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -142,7 +142,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new TranslationException(lineNumber, line, "expected goto SYMBOL");
+                    throw new TranslationException(lineNumber, line, "expected 'goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -152,8 +152,24 @@ public static class VmCodeParser
             case "return":
                 return new ReturnCommand();
             
-            case "function":
-                return new FunctionDeclarationCommand(trimmedLine);
+            case "function":{
+                if (lineComponents.Length != 3)
+                {
+                    throw new TranslationException(lineNumber, line, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
+                }
+                
+                if (!uint.TryParse(lineComponents[2], out var numLocals))
+                {
+                    throw new ParserException(
+                        lineNumber, 
+                        line,
+                        "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS', where NUMBER_OF_LOCALS is positive integer");
+                }
+                
+                var functionName = lineComponents[1];
+                return new FunctionDeclarationCommand(functionName, numLocals);
+            }
+                
             
             case "call":
                 return new FunctionCallCommand(trimmedLine);
