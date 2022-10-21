@@ -15,14 +15,55 @@ public class VmCodeParser
         }
         _hasParsed = true;
 
-        var code =
+        var linesAndParsedCommands =
             inputFiles
                 .Select(ParseFile)
                 .SelectMany(c => c)
-                .Select(lc => lc.command)
                 .ToArray();
+
+        if (!linesAndParsedCommands.Any(lc =>
+            {
+                if (!(lc.command is FunctionDeclarationCommand functionDeclarationCommand))
+                {
+                    return false;
+                }
+
+                return functionDeclarationCommand.FunctionName == "Sys.init";
+            }))
+        {
+            throw new ParserException("No function Sys.init found.");
+        }
+
+        var declaredFunctionNames = new Dictionary<string, LineInfo>();
+        foreach (var lineAndFunctionDeclaration in linesAndParsedCommands.Where(lc=> lc.command is FunctionDeclarationCommand))
+        {
+            var functionDeclaration = (FunctionDeclarationCommand)lineAndFunctionDeclaration.command;
+            if (declaredFunctionNames.ContainsKey(functionDeclaration.FunctionName))
+            {
+                var otherLineInfo = declaredFunctionNames[functionDeclaration.FunctionName];
+                throw new ParserException(
+                    lineAndFunctionDeclaration.lineInfo,
+                    $"Function name {functionDeclaration.FunctionName} already declared. " +
+                    $"File {otherLineInfo.FileName} Line Number {otherLineInfo.LineNumber}");
+            }
+            declaredFunctionNames.Add(functionDeclaration.FunctionName, lineAndFunctionDeclaration.lineInfo);
+        }
+
+        foreach (var lineAndFunctionCall in linesAndParsedCommands.Where(lc=> lc.command is FunctionCallCommand))
+        {
+            var functionCall = (FunctionCallCommand)lineAndFunctionCall.command;
+            if (!declaredFunctionNames.ContainsKey(functionCall.FunctionName))
+            {
+                throw new ParserException(
+                    lineAndFunctionCall.lineInfo,
+                    $"Function name {functionCall.FunctionName} not declared.");
+            }
+        }
         
-        return new VmCode(code);
+        return new VmCode(
+            linesAndParsedCommands
+                .Select(lc => lc.command)
+                .ToArray());
     }
 
     private IEnumerable<(LineInfo lineInfo, ICommand command)> ParseFile(InputFileInfo inputFile)
