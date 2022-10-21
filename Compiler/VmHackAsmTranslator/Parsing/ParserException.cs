@@ -2,6 +2,6 @@ namespace VmHackAsmTranslator.Parsing;
 
 public class ParserException : Exception
 {
-    public ParserException(int lineNumber, string line, string message) 
-        : base($"Line Number {lineNumber}: '{line}' : {message}"){}
+    public ParserException(LineInfo lineInfo, string message) 
+        : base($"File {lineInfo.FileName} Line Number {lineInfo.LineNumber}: '{lineInfo.OriginalLine}' : {message}"){}
 }

@@ -2,36 +2,47 @@ using FileHandling;
 
 namespace VmHackAsmTranslator.Parsing;
 
-public static class VmCodeParser
+public class VmCodeParser
 {
-    public static VmCode Parse(IEnumerable<InputFileInfo> inputFiles)
+    // ReSharper disable once RedundantDefaultMemberInitializer
+    private bool _hasParsed = false;
+    
+    public VmCode Parse(IEnumerable<InputFileInfo> inputFiles)
     {
+        if (_hasParsed)
+        {
+            throw new InvalidOperationException("This Parser has already been run");
+        }
+        _hasParsed = true;
+
         var code =
             inputFiles
                 .Select(ParseFile)
-                .SelectMany(c=>c)
+                .SelectMany(c => c)
+                .Select(lc => lc.command)
                 .ToArray();
         
         return new VmCode(code);
     }
 
-    private static IEnumerable<ICommand> ParseFile(InputFileInfo inputFile)
+    private IEnumerable<(LineInfo lineInfo, ICommand command)> ParseFile(InputFileInfo inputFile)
     {
-        var lineNumber = 0;
-        var commands = new List<ICommand>();
-        
+        var lineNumber = (uint)0;
+        var commands = new List<(LineInfo lineInfo, ICommand command)>();
+
         foreach (var lineContent in inputFile.Content)
         {
             lineNumber++;
-            commands.Add(ParseLine(lineNumber, lineContent));
+            var lineInfo = new LineInfo(inputFile.FileName, lineNumber, lineContent);
+            commands.Add((lineInfo, ParseLine(lineInfo)));
         }
 
         return commands;
     }
     
-    private static ICommand ParseLine(int lineNumber, string line)
+    private ICommand ParseLine(LineInfo lineInfo)
     {
-        var trimmedLine = TrimLine(line);
+        var trimmedLine = TrimLine(lineInfo.OriginalLine);
         if (string.IsNullOrWhiteSpace(trimmedLine))
         {
             return new NonCommand();
@@ -45,13 +56,12 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 3)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'push SEGMENT INDEX'");
+                    throw new ParserException(lineInfo, "expected 'push SEGMENT INDEX'");
                 }
         
                 if (!uint.TryParse(lineComponents[2], out var index))
                 {
-                    throw new ParserException(lineNumber, line,
-                        "expected 'push SEGMENT INDEX', where INDEX is positive integer");
+                    throw new ParserException(lineInfo, "expected 'push SEGMENT INDEX', where INDEX is positive integer");
                 }
 
                 var segment = lineComponents[1] switch
@@ -64,26 +74,22 @@ public static class VmCodeParser
                     "that" => SegmentType.That,
                     "pointer" => SegmentType.Pointer,
                     "temp" => SegmentType.Temp,
-                    _ => throw new ParserException(
-                        lineNumber,
-                        line,
-                        "expected 'push SEGMENT INDEX', where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}")
+                    _ => throw new ParserException(lineInfo, "expected 'push SEGMENT INDEX', where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}")
                 };
                 
-                return new PushCommand(segment, index, line);
+                return new PushCommand(segment, index);
             }
 
             case "pop":
             {
                 if (lineComponents.Length != 3)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'pop SEGMENT INDEX'");
+                    throw new ParserException(lineInfo, "expected 'pop SEGMENT INDEX'");
                 }
 
                 if (!uint.TryParse(lineComponents[2], out var index))
                 {
-                    throw new ParserException(lineNumber, line,
-                        "expected 'pop SEGMENT INDEX', where INDEX is positive integer");
+                    throw new ParserException(lineInfo, "expected 'pop SEGMENT INDEX', where INDEX is positive integer");
                 }
 
                 var segment = lineComponents[1] switch
@@ -95,13 +101,10 @@ public static class VmCodeParser
                     "that" => SegmentType.That,
                     "pointer" => SegmentType.Pointer,
                     "temp" => SegmentType.Temp,
-                    _ => throw new ParserException(
-                        lineNumber,
-                        line,
-                        "expected 'pop SEGMENT INDEX', where SEGMENT is in {argument, local, static, this, that, pointer, temp}")
+                    _ => throw new ParserException(lineInfo, "expected 'pop SEGMENT INDEX', where SEGMENT is in {argument, local, static, this, that, pointer, temp}")
                 };
                 
-                return new PopCommand(segment, index, line);
+                return new PopCommand(segment, index);
             }
             
             case "add":
@@ -116,7 +119,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 1)
                 {
-                    throw new ParserException(lineNumber, line, $"expected '{lineComponents[0]}'");
+                    throw new ParserException(lineInfo, $"expected '{lineComponents[0]}'");
                 }
 
                 var arithmeticCommandType = lineComponents[0] switch
@@ -138,7 +141,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'label SYMBOL'");
+                    throw new ParserException(lineInfo, "expected 'label SYMBOL'");
                 }
 
                 var symbol = lineComponents[1];
@@ -149,7 +152,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'if-goto SYMBOL'");
+                    throw new ParserException(lineInfo, "expected 'if-goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -161,7 +164,7 @@ public static class VmCodeParser
             {
                 if (lineComponents.Length != 2)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'goto SYMBOL'");
+                    throw new ParserException(lineInfo, "expected 'goto SYMBOL'");
                 }
         
                 var symbol = lineComponents[1];
@@ -174,14 +177,13 @@ public static class VmCodeParser
             case "function":{
                 if (lineComponents.Length != 3)
                 {
-                    throw new ParserException(lineNumber, line, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
+                    throw new ParserException(lineInfo, "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS'");
                 }
                 
                 if (!uint.TryParse(lineComponents[2], out var numLocals))
                 {
                     throw new ParserException(
-                        lineNumber, 
-                        line,
+                        lineInfo,
                         "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS', where NUMBER_OF_LOCALS is positive integer");
                 }
                 
@@ -194,9 +196,7 @@ public static class VmCodeParser
                 return new FunctionCallCommand(trimmedLine);
 
             default:
-                throw new ParserException(
-                    lineNumber, 
-                    line, 
+                throw new ParserException(lineInfo,
                     "Expected command to start with " +
                     "'push', 'pop', 'add', 'sub', 'neg', 'and', 'or', 'not', 'eq', 'lt', 'gt', 'label', 'if-goto', 'return', 'function', 'call'" +
                     " or be a comment");
