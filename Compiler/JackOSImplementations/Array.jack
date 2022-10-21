@@ -10,7 +10,7 @@ class Array
         
         if(~(size > 0))
         {
-            do Sys.Error(2);
+            do Sys.error(2);
         }
         
         let pointer = Memory.alloc(size);

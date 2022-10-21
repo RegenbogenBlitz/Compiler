@@ -97,7 +97,7 @@ class String
     {
         var int v;
         var char si;
-        var bool isNegative;
+        var boolean isNegative;
         var int i;
         
         let v = 0;
@@ -138,7 +138,7 @@ class String
     {
         var int firstDigit;
         var int bigTen;
-        var bool firstDigitWritten;
+        var boolean firstDigitWritten;
         var int leadingChunk;
         
         let currentLength = 0;

@@ -53,8 +53,8 @@ class Memory
         
         var int nextBlockAddress;
         
-        var bool isFirstBlock;
-        var bool isLastBlock;
+        var boolean isFirstBlock;
+        var boolean isLastBlock;
         
         if((~(size > 0)) | (firstBlockAddress = 0))
         {
@@ -143,8 +143,8 @@ class Memory
         
         var int nextBlockAddress;
         
-        var bool isFirstBlock;
-        var bool isLastBlock;
+        var boolean isFirstBlock;
+        var boolean isLastBlock;
         
         let freeBlockAddress = object - 1;
         let freeBlockLength = Memory.peek(freeBlockAddress);
