@@ -146,52 +146,52 @@ public static class AsmWriter
         {
             new AsmCodeSection("Reusable Sub Routines", new IAsmOutput[]
             {
-                new AsmCodeLine(UnconditionalJump(SkipSubsLabel, 1)),
+                UnconditionalJump(SkipSubsLabel),
                 new AsmCodeSection("Equals",
-                    new[]
+                    new IAsmOutput[]
                     {
                         WriteLabel(EqualsSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D = 0 Then Goto IsTrue Else Goto IsFalse"),
-                        new AsmCodeLine(ConditionalJump("JEQ", IsTrueLabel, 2)),
-                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                        ConditionalJump("JEQ", IsTrueLabel),
+                        UnconditionalJump(IsFalseLabel)
                     }),
                 new AsmCodeSection("Is Less Than",
-                    new[]
+                    new IAsmOutput[]
                     {
                         WriteLabel(LessThanSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D < 0 Then Goto IsTrue Else Goto IsFalse"),
-                        new AsmCodeLine(ConditionalJump("JLT", IsTrueLabel, 2)),
-                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                        ConditionalJump("JLT", IsTrueLabel),
+                        UnconditionalJump(IsFalseLabel)
                     }),
                 new AsmCodeSection("Is Greater Than",
-                    new[]
+                    new IAsmOutput[]
                     {
                         WriteLabel(GreaterThanSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D > 0 Then Goto IsTrue Else Goto IsFalse"),
-                        new AsmCodeLine(ConditionalJump("JGT", IsTrueLabel, 2)),
-                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                        ConditionalJump("JGT", IsTrueLabel),
+                        UnconditionalJump(IsFalseLabel)
                     }),
                 new AsmCodeSection("ReusableComparison",
                     new[]
                     {
-                        new AsmCodeSection("Is True", new[]
+                        new AsmCodeSection("Is True", new IAsmOutput[]
                         {
                             WriteLabel(IsTrueLabel),
                             new AsmCodeLine(NegativeValueToD("1", 3)),
                             new AsmCodeLine(DToTopStack(3)),
                             new AsmCodeLine(LiftStack(3)),
-                            new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
+                            UnconditionalJumpToAddressInMemory("R14")
                         }),
-                        new AsmCodeSection("Is False", new[]
+                        new AsmCodeSection("Is False", new IAsmOutput[]
                         {
                             WriteLabel(IsFalseLabel),
                             new AsmCodeLine(ValueToD("0", 3)),
                             new AsmCodeLine(DToTopStack(3)),
                             new AsmCodeLine(LiftStack(3)),
-                            new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
+                            UnconditionalJumpToAddressInMemory("R14")
                         })
                     }),
                 new AsmCodeSection("Return",
@@ -278,18 +278,17 @@ public static class AsmWriter
                         new AsmCodeLine(AInstruction("SP")),
                         new AsmCodeLine("D=M", "M[SP] => D "),
                         new AsmCodeLine(DToMemory("LCL", 2)),
-                        new AsmCodeSection("Goto function address",
-                            new[]
-                            {
-                                new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
-                            })
+                        new AsmCodeSection("Goto function address", new[]
+                        {
+                            UnconditionalJumpToAddressInMemory("R14")
+                        })
                     }),
                 WriteLabel(SkipSubsLabel)
             }),
             SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0),
             WriteFunctionCall("Sys.init", 0),
             WriteLabel("END"),
-            new AsmCodeLine(UnconditionalJump("END", 0))
+            UnconditionalJump("END")
         };
     
     private static AsmCodeSection WritePush(string className, SegmentType segment, uint index)
@@ -489,7 +488,7 @@ public static class AsmWriter
                         new AsmCodeLine(ValueToD(label, 2)),
                         new AsmCodeLine(DToMemory("R14", 2))
                     }),
-                new AsmCodeLine(UnconditionalJump(subLabel, 1)),
+                UnconditionalJump(subLabel),
                 WriteLabel(label)
             });
 
@@ -499,25 +498,25 @@ public static class AsmWriter
 
     private static AsmCodeSection WriteIfGoto(string functionName, string label) =>
         new($"If-Goto {ToAsmFunctionQualifiedLabel(functionName, label)}",
-            new[]
+            new IAsmOutput[]
             {
                 new AsmCodeLine(DropStack(1)),
                 new AsmCodeLine(TopStackToD(1)),
-                new AsmCodeLine(ConditionalJump("JNE", ToAsmFunctionQualifiedLabel(functionName, label), 1))
+                ConditionalJump("JNE", ToAsmFunctionQualifiedLabel(functionName, label))
             });
     
     private static AsmCodeSection WriteGoto(string functionName, string label) =>
         new($"Goto {ToAsmFunctionQualifiedLabel(functionName, label)}",
             new[]
             {
-                new AsmCodeLine(UnconditionalJump(ToAsmFunctionQualifiedLabel(functionName, label), 1))
+                UnconditionalJump(ToAsmFunctionQualifiedLabel(functionName, label))
             });
     
     private static AsmCodeSection WriteReturn() =>
         new("Return",
             new[]
             {
-                new AsmCodeLine(UnconditionalJump(ReturnSubLabel, 1))
+                UnconditionalJump(ReturnSubLabel)
             });
     
     private static AsmCodeSection WriteFunctionDeclaration(string functionName, uint numLocals)
@@ -547,7 +546,7 @@ public static class AsmWriter
         string escapedFunctionName = "$" + functionName;
         var code = new AsmCodeSection(
             $"Call Function:{functionName} Args:{numArguments}",
-            new[]
+            new IAsmOutput[]
             {
                 new AsmCodeLine(AInstruction(escapedFunctionName)),
                 new AsmCodeLine("D=A", $"{escapedFunctionName}=> D"),
@@ -557,7 +556,7 @@ public static class AsmWriter
                 new AsmCodeLine(DToMemory("R15", 1)),
                 new AsmCodeLine(AInstruction(label)),
                 new AsmCodeLine("D=A", $"{escapedFunctionName}=> D"),
-                new AsmCodeLine(UnconditionalJump(CallSubLabel, 1)),
+                UnconditionalJump(CallSubLabel),
                 WriteLabel(label)
             });
         _functionReturnLabelNum++;
@@ -731,30 +730,40 @@ public static class AsmWriter
     private static AsmCodeLine WriteLabel(string label)
         => new($"({label})");
 
-    private static string UnconditionalJump(string address, int indentation) =>
-        AInstruction(address) +
-        PadLine("0;JMP")  + Comment($"goto {address}", indentation);
+    private static AsmCodeSection UnconditionalJump(string address) =>
+        new(new AsmCodeLine[]
+        {
+            new(AInstruction(address)),
+            new("0;JMP", $"goto {address}")
+        });
 
-    private static string ConditionalJump(string jumpType, string address, int indentation)
+    private static AsmCodeSection ConditionalJump(string jumpType, string address)
     {
         if (jumpType == "JNE")
         {
-            return
-                AInstruction(address) +
-                PadLine($"D;{jumpType}") + Comment($"if D!= 0 then goto {address}", indentation);
+            return new(new AsmCodeLine[]
+            {
+                new(AInstruction(address)),
+                new($"D;{jumpType}", $"if D!= 0 then goto {address}")
+            });
         }
         else
         {
-            return
-                AInstruction(address) +
-                PadLine($"D;{jumpType}") + Comment($"goto {address}", indentation);
+            return new(new AsmCodeLine[]
+            {
+                new(AInstruction(address)),
+                new($"D;{jumpType}", $"goto {address}")
+            });
         }
     }
 
-    private static string UnconditionalJumpToAddressInMemory(string memoryAddress, int indentation) =>
-        AInstruction(memoryAddress) +
-        PadLine("A=M") + Environment.NewLine +
-        PadLine("0;JMP")  + Comment($"goto {memoryAddress}", indentation);
+    private static AsmCodeSection UnconditionalJumpToAddressInMemory(string memoryAddress) =>
+        new(new AsmCodeLine[]
+        {
+            new(AInstruction(memoryAddress)),
+            new("A=M"),
+            new("0;JMP", $"goto {memoryAddress}")
+        });
     
     private static string Comment(string comment, int indentation)
         => " // "+ "".PadRight(indentation * 3, ' ') + comment + Environment.NewLine;
