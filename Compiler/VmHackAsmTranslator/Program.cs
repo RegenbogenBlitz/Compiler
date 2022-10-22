@@ -4,12 +4,21 @@ using VmHackAsmTranslator.Parsing;
 
 const string inputFileExtension = ".vm";
 
-if (args == null || args.Length == 0)
+if (args == null)
 {
-    throw new ArgumentNullException("args", "Must supply file name or directory.");
+    throw new ArgumentNullException("args", "Args missing");
 }
 
-string fileOrFolderPath = args[0];
+var options = args.Where(a => a.StartsWith("-")).ToArray();
+var writeComments = options.Any(o=> o == "-c");
+
+var arguments = args.Where(a => !a.StartsWith("-")).ToArray();
+if (arguments.Length == 0)
+{
+    throw new ArgumentException("Must supply file name or directory.", nameof(args));
+}
+
+string fileOrFolderPath = arguments[0];
 var inputFileHandler = new InputFileHandler(inputFileExtension);
 var inputFilesContent = 
     inputFileHandler.ReadInputFileContent(fileOrFolderPath, out var folderParent);
@@ -18,7 +27,7 @@ try
 {
     var directory = new DirectoryInfo(folderParent);
     var vmCode = new VmCodeParser().Parse(inputFilesContent);
-    var outputFileInfo = AsmWriter.Write(directory.Name, vmCode, true);
+    var outputFileInfo = AsmWriter.Write(directory.Name, vmCode, writeComments);
 
     OutputFileHandler.WriteOutputFileContent(
         folderParent,
