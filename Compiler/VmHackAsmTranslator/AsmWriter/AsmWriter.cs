@@ -19,10 +19,14 @@ public static class AsmWriter
     private const string EndGreaterThanSubLabel = "END_GT";
     
     private const string EqualsReturnLabel = "RET_ADDRESS_EQ";
+    // ReSharper disable once RedundantDefaultMemberInitializer
+    private static int _eqReturnLabelNum = 0;
     private const string LessThanReturnLabel = "RET_ADDRESS_LT";
+    // ReSharper disable once RedundantDefaultMemberInitializer
+    private static int _ltReturnLabelNum = 0;
     private const string GreaterThanReturnLabel = "RET_ADDRESS_GT";
     // ReSharper disable once RedundantDefaultMemberInitializer
-    private static int _comparisionReturnLabelNum = 0;
+    private static int _gtReturnLabelNum = 0;
     
     private const string CallSubLabel = "CALL_SUB";
     private const string ReturnSubLabel = "RETURN_SUB";
@@ -76,15 +80,30 @@ public static class AsmWriter
                             break;
                         
                         case ArithmeticCommandType.Eq:
-                            asmOutputs.Add(WriteComparison("Equals", EqualsReturnLabel, StartEqualsSubLabel));
+                            asmOutputs.Add(
+                                WriteComparison(
+                                    "Equals",
+                                    EqualsReturnLabel + _eqReturnLabelNum,
+                                    StartEqualsSubLabel));
+                            _eqReturnLabelNum++;
                             break;
                         
                         case ArithmeticCommandType.Lt:
-                            asmOutputs.Add(WriteComparison("Less Than", LessThanReturnLabel, StartLessThanSubLabel));
+                            asmOutputs.Add(
+                                WriteComparison(
+                                    "Less Than", 
+                                    LessThanReturnLabel + _ltReturnLabelNum, 
+                                    StartLessThanSubLabel));
+                            _ltReturnLabelNum++;
                             break;
                         
                         case ArithmeticCommandType.Gt:
-                            asmOutputs.Add(WriteComparison("Greater Than", GreaterThanReturnLabel, StartGreaterThanSubLabel));
+                            asmOutputs.Add(
+                                WriteComparison(
+                                    "Greater Than",
+                                    GreaterThanReturnLabel + _gtReturnLabelNum,
+                                    StartGreaterThanSubLabel));
+                            _gtReturnLabelNum++;
                             break;
                         
                         default:
@@ -303,7 +322,7 @@ public static class AsmWriter
                     }),
                 WriteLabel(SkipSubsLabel),
             }),
-            WriteFunctionCall("Sys.init", 0)
+            WriteFunctionCall("sys.init", 0)
         };
     }
 
@@ -336,20 +355,29 @@ public static class AsmWriter
                     });
             
             case SegmentType.Constant:
-                return index == 0
-                    ? new AsmCodeSection("Push Constant '0'",
+                return index switch
+                {
+                    0 => new AsmCodeSection("Push Constant '0'",
                         new IAsmOutput[]
                         {
                             LiftStack(),
                             new AsmCodeLine("A=M-1", "A <= M(SP)-1"),
                             new AsmCodeLine("M=0", "M(M(SP)-1) = 0")
-                        })
-                    : new AsmCodeSection($"Push Constant '{index}'",
+                        }),
+                    1 => new AsmCodeSection("Push Constant '1'",
+                        new IAsmOutput[]
+                        {
+                            LiftStack(),
+                            new AsmCodeLine("A=M-1", "A <= M(SP)-1"),
+                            new AsmCodeLine("M=1", "M(M(SP)-1) = 1")
+                        }),
+                    _ => new AsmCodeSection($"Push Constant '{index}'",
                         new[]
                         {
                             ValueToD(index.ToString()),
                             PushD_SpPointsAboveTopStackValue()
-                        });
+                        })
+                };
             
             case SegmentType.This:
                 return new AsmCodeSection($"Push M(M(THIS) + {index})",
@@ -485,7 +513,7 @@ public static class AsmWriter
     
     private static AsmCodeSection WriteComparison(string operatorName, string returnLabel, string subLabel)
     {
-        var label = returnLabel + _comparisionReturnLabelNum;
+        var label = returnLabel;
         var equalsSection = new AsmCodeSection(operatorName,
             new IAsmOutput[]
             {
@@ -494,7 +522,6 @@ public static class AsmWriter
                 WriteLabel(label)
             });
 
-        _comparisionReturnLabelNum++;
         return equalsSection;
     }
 

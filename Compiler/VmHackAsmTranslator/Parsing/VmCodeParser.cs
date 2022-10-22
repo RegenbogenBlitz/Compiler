@@ -27,10 +27,15 @@ public class VmCodeParser
             "String",
             "Sys"
         };
-        
+
         var orderedFiles =
-            inputFilesArray.Where(f => !osFiles.Contains(f.FileName))
-                .Concat(inputFilesArray.Where(f => osFiles.Contains(f.FileName)));
+            inputFilesArray
+                .Where(f => !osFiles.Contains(f.FileName, StringComparer.OrdinalIgnoreCase))
+                .OrderBy(f => f.FileName)
+                .Concat(
+                    inputFilesArray
+                        .Where(f => osFiles.Contains(f.FileName, StringComparer.OrdinalIgnoreCase))
+                        .OrderBy(f => f.FileName));
             
         var linesAndParsedCommands =
             orderedFiles
@@ -136,7 +141,7 @@ public class VmCodeParser
                     _ => throw new ParserException(lineInfo, "expected 'push SEGMENT INDEX', where SEGMENT is in {argument, local, static, constant, this, that, pointer, temp}")
                 };
                 
-                return new PushCommand(lineInfo.FileName, segment, index);
+                return new PushCommand(lineInfo.FileName.ToLower(), segment, index);
             }
 
             case "pop":
@@ -163,7 +168,7 @@ public class VmCodeParser
                     _ => throw new ParserException(lineInfo, "expected 'pop SEGMENT INDEX', where SEGMENT is in {argument, local, static, this, that, pointer, temp}")
                 };
                 
-                return new PopCommand(lineInfo.FileName, segment, index);
+                return new PopCommand(lineInfo.FileName.ToLower(), segment, index);
             }
             
             case "add":
@@ -204,7 +209,7 @@ public class VmCodeParser
                 }
 
                 var symbol = lineComponents[1];
-                return new LabelCommand(functionName, symbol);
+                return new LabelCommand(functionName, symbol.ToLower());
             }
             
             case "if-goto":
@@ -215,7 +220,7 @@ public class VmCodeParser
                 }
         
                 var symbol = lineComponents[1];
-                return new IfGotoCommand(functionName, symbol);
+                return new IfGotoCommand(functionName, symbol.ToLower());
             }
                 
 
@@ -227,7 +232,7 @@ public class VmCodeParser
                 }
         
                 var symbol = lineComponents[1];
-                return new GotoCommand(functionName, symbol);
+                return new GotoCommand(functionName, symbol.ToLower());
             }
             
             case "return":
