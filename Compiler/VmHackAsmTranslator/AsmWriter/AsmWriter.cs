@@ -150,7 +150,7 @@ public static class AsmWriter
                 new AsmCodeSection("Equals",
                     new[]
                     {
-                        new AsmCodeLine(WriteLabel(EqualsSubLabel)),
+                        WriteLabel(EqualsSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D = 0 Then Goto IsTrue Else Goto IsFalse"),
                         new AsmCodeLine(ConditionalJump("JEQ", IsTrueLabel, 2)),
@@ -159,7 +159,7 @@ public static class AsmWriter
                 new AsmCodeSection("Is Less Than",
                     new[]
                     {
-                        new AsmCodeLine(WriteLabel(LessThanSubLabel)),
+                        WriteLabel(LessThanSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D < 0 Then Goto IsTrue Else Goto IsFalse"),
                         new AsmCodeLine(ConditionalJump("JLT", IsTrueLabel, 2)),
@@ -168,7 +168,7 @@ public static class AsmWriter
                 new AsmCodeSection("Is Greater Than",
                     new[]
                     {
-                        new AsmCodeLine(WriteLabel(GreaterThanSubLabel)),
+                        WriteLabel(GreaterThanSubLabel),
                         new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
                         new AsmCodeLine(string.Empty, "If D > 0 Then Goto IsTrue Else Goto IsFalse"),
                         new AsmCodeLine(ConditionalJump("JGT", IsTrueLabel, 2)),
@@ -179,7 +179,7 @@ public static class AsmWriter
                     {
                         new AsmCodeSection("Is True", new[]
                         {
-                            new AsmCodeLine(WriteLabel(IsTrueLabel)),
+                            WriteLabel(IsTrueLabel),
                             new AsmCodeLine(NegativeValueToD("1", 3)),
                             new AsmCodeLine(DToTopStack(3)),
                             new AsmCodeLine(LiftStack(3)),
@@ -187,7 +187,7 @@ public static class AsmWriter
                         }),
                         new AsmCodeSection("Is False", new[]
                         {
-                            new AsmCodeLine(WriteLabel(IsFalseLabel)),
+                            WriteLabel(IsFalseLabel),
                             new AsmCodeLine(ValueToD("0", 3)),
                             new AsmCodeLine(DToTopStack(3)),
                             new AsmCodeLine(LiftStack(3)),
@@ -197,7 +197,7 @@ public static class AsmWriter
                 new AsmCodeSection("Return",
                     new IAsmOutput[]
                     {
-                        new AsmCodeLine(WriteLabel(ReturnSubLabel)),
+                        WriteLabel(ReturnSubLabel),
                         new AsmCodeSection("FRAME  = LCL", new[]
                         {
                             new AsmCodeLine(MemoryToD("LCL", "M[Local]", 3)),
@@ -254,7 +254,7 @@ public static class AsmWriter
                 new AsmCodeSection("Call Function",
                     new IAsmOutput[]
                     {
-                        new AsmCodeLine(WriteLabel(CallSubLabel)),
+                        WriteLabel(CallSubLabel),
                         new AsmCodeLine(PushD(2)),
                         new AsmCodeLine(AInstruction("LCL")),
                         new AsmCodeLine("D=M", "M[LCL] => D "),
@@ -284,11 +284,11 @@ public static class AsmWriter
                                 new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
                             })
                     }),
-                new AsmCodeLine(WriteLabel(SkipSubsLabel))
+                WriteLabel(SkipSubsLabel)
             }),
             SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0),
             WriteFunctionCall("Sys.init", 0),
-            new AsmCodeLine(WriteLabel("END")),
+            WriteLabel("END"),
             new AsmCodeLine(UnconditionalJump("END", 0))
         };
     
@@ -490,7 +490,7 @@ public static class AsmWriter
                         new AsmCodeLine(DToMemory("R14", 2))
                     }),
                 new AsmCodeLine(UnconditionalJump(subLabel, 1)),
-                new AsmCodeLine(WriteLabel(label))
+                WriteLabel(label)
             });
 
         _comparisionReturnLabelNum++;
@@ -527,7 +527,7 @@ public static class AsmWriter
             $"Declare Function:{functionName} Locals:{numLocals}",
             codeLines);
             
-        codeLines.Add(new AsmCodeLine(WriteLabel("$" + functionName)));
+        codeLines.Add(WriteLabel("$" + functionName));
 
         if (numLocals > 0)
         {
@@ -558,14 +558,14 @@ public static class AsmWriter
                 new AsmCodeLine(AInstruction(label)),
                 new AsmCodeLine("D=A", $"{escapedFunctionName}=> D"),
                 new AsmCodeLine(UnconditionalJump(CallSubLabel, 1)),
-                new AsmCodeLine(WriteLabel(label))
+                WriteLabel(label)
             });
         _functionReturnLabelNum++;
         return code;
     }
 
     private static AsmCodeLine WriteFunctionQualifiedLabel(string functionName, string label) =>
-        new (WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label)));
+        WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label));
     
     private static string ToAsmFunctionQualifiedLabel(string functionName, string label) =>
         $"{functionName}${label}";
@@ -727,9 +727,9 @@ public static class AsmWriter
 
     private static string AInstruction(string value)
         => PadLine($"@{value}") + Environment.NewLine;
-    
-    private static string WriteLabel(string label)
-        => PadLine($"({label})") + Environment.NewLine;
+
+    private static AsmCodeLine WriteLabel(string label)
+        => new($"({label})");
 
     private static string UnconditionalJump(string address, int indentation) =>
         AInstruction(address) +
