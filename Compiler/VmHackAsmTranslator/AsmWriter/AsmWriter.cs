@@ -274,13 +274,13 @@ public static class AsmWriter
                         new AsmCodeLine("A=M"),
                         new AsmCodeLine("M=D", "TopStack <= return-address"),
                         MemoryToD("LCL", "M(LCL)"),
-                        PushD(),
+                        PushD_SpPointToTopStackValue(),
                         MemoryToD("ARG", "M(ARG)"),
-                        PushD(),
+                        PushD_SpPointToTopStackValue(),
                         MemoryToD("THIS", "M(THIS)"),
-                        PushD(),
+                        PushD_SpPointToTopStackValue(),
                         MemoryToD("THAT", "M(THAT)"),
-                        PushD(),
+                        PushD_SpPointToTopStackValue(),
                         
                         AInstruction("4"),
                         new AsmCodeLine("D=A", "D <= 4"),
@@ -313,7 +313,7 @@ public static class AsmWriter
                     new []
                     {
                         IndirectMemoryToD("ARG", index, "Argument"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.Local:
@@ -321,7 +321,7 @@ public static class AsmWriter
                     new []
                     {
                         IndirectMemoryToD("LCL", index, "Local"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.Static:
@@ -329,7 +329,7 @@ public static class AsmWriter
                     new []
                     {
                         MemoryToD($"{className}.{index}", $"M[M[Static {index}]]"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.Constant:
@@ -337,7 +337,7 @@ public static class AsmWriter
                     new []
                     {
                         ValueToD(index.ToString()),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.This:
@@ -345,7 +345,7 @@ public static class AsmWriter
                     new []
                     {
                         IndirectMemoryToD("THIS", index, "This"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.That:
@@ -353,7 +353,7 @@ public static class AsmWriter
                     new []
                     {
                         IndirectMemoryToD("THAT", index, "That"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.Pointer:
@@ -363,7 +363,7 @@ public static class AsmWriter
                     new []
                     {
                         MemoryToD(pointerAddress.ToString(), $"pointer + {index}"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             case SegmentType.Temp:
@@ -373,7 +373,7 @@ public static class AsmWriter
                     new []
                     {
                         MemoryToD(tempAddress.ToString(), $"temp + {index}"),
-                        PushD()
+                        PushD_SpPointsAboveTopStackValue()
                     });
             
             default:
@@ -416,29 +416,27 @@ public static class AsmWriter
                 return new AsmCodeSection($"Pop M[M[This] + {index}]",
                     new[]
                     {
-                        OffsetMemoryToMemory("THIS", "This", index, "R13"),
                         PopToD(),
-                        DToIndirectMemory("R13", $"M[This] + {index}")
+                        DToIndirectMemory("THIS", $"M[This] + {index}")
                     });
             
             case SegmentType.That:
-                return new AsmCodeSection($"Pop M[M[That] + {index}]",
+                return new AsmCodeSection($"Pop M[M[THAT] + {index}]",
                     new []
                     {
-                        OffsetMemoryToMemory("THAT", "That", index, "R13"),
                         PopToD(),
-                        DToIndirectMemory("R13", $"M[That] + {index}")
+                        DToIndirectMemory("THAT", $"M[THAT] + {index}")
                     });
             case SegmentType.Pointer:
             {
-                var pointerAddress = BasePointerAddress + index;
+                var pointerAddress = index == 0 ? "THIS" : "THAT";
                 var memoryAddressComment = $"pointer + {index}";
                 
                 return new AsmCodeSection($"Pop M[pointer + {index}]",
                     new IAsmOutput[]
                     {
                         PopToD(),
-                        new AsmCodeLine($"@{pointerAddress.ToString()}", $"{memoryAddressComment} => A"),
+                        new AsmCodeLine($"@{pointerAddress}", $"{memoryAddressComment} => A"),
                         new AsmCodeLine("M=D", $"D => {memoryAddressComment}")
                     });
             }
@@ -483,7 +481,7 @@ public static class AsmWriter
                     PopToD(),
                     DOperatorMemoryToD("R13", operatorSymbol, commentOperator)
                 }),
-                PushD()
+                PushD_SpPointsAboveTopStackValue()
             });
     
     private static AsmCodeSection WriteComparison(string operatorName, string returnLabel, string subLabel)
@@ -537,7 +535,7 @@ public static class AsmWriter
             codeLines.Add(ValueToD("0"));
             for (var i = 0; i < numLocals; i++)
             {
-                codeLines.Add(PushD());
+                codeLines.Add(PushD_SpPointsAboveTopStackValue());
             }
         }
 
@@ -581,12 +579,21 @@ public static class AsmWriter
                 new AsmCodeLine("D=A", $"{value} => D"),
                 DToMemory(memoryAddress)
             });
-
-    private static AsmCodeSection PushD() =>
+    
+    private static AsmCodeSection PushD_SpPointToTopStackValue() =>
         new(new []
         {
             AInstruction("SP"),
-            new("AM=M+1", "Lift stack and point to top of stack"),
+            new("AM=M+1", "Lift stack and point to top-stack-value"),
+            new("M=D", "TopStack <= D")
+        });
+    
+    private static AsmCodeSection PushD_SpPointsAboveTopStackValue() =>
+        new(new[]
+        {
+            AInstruction("SP"),
+            new("AM=M+1", "Lift stack and point to above top-stack-value"),
+            new("A=A-1", "A = address of top-stack-value"),
             new("M=D", "TopStack <= D")
         });
     

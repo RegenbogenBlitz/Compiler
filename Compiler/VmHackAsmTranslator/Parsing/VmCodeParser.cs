@@ -15,8 +15,25 @@ public class VmCodeParser
         }
         _hasParsed = true;
 
+        var inputFilesArray = inputFiles.ToArray();
+        var osFiles = new[]
+        {
+            "Array",
+            "KeyBoard",
+            "Math",
+            "Memory",
+            "Output",
+            "Screen",
+            "String",
+            "Sys"
+        };
+        
+        var orderedFiles =
+            inputFilesArray.Where(f => !osFiles.Contains(f.FileName))
+                .Concat(inputFilesArray.Where(f => osFiles.Contains(f.FileName)));
+            
         var linesAndParsedCommands =
-            inputFiles
+            orderedFiles
                 .Select(ParseFile)
                 .SelectMany(c => c)
                 .ToArray();
