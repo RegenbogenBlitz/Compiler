@@ -111,15 +111,15 @@ public static class AsmWriter
                     break;
 
                 case FunctionDeclarationCommand functionDeclarationCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteFunctionDeclaration(
+                    asmOutputs.Add(WriteFunctionDeclaration(
                         functionDeclarationCommand.FunctionName,
-                        functionDeclarationCommand.NumLocals)));
+                        functionDeclarationCommand.NumLocals));
                     break;
                     
                 case FunctionCallCommand functionCallCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteFunctionCall(
+                    asmOutputs.Add(WriteFunctionCall(
                         functionCallCommand.FunctionName,
-                        functionCallCommand.NumArguments)));
+                        functionCallCommand.NumArguments));
                     break;
                 
                 case NonCommand:
@@ -287,7 +287,7 @@ public static class AsmWriter
                 new AsmCodeLine(WriteLabel(SkipSubsLabel))
             }),
             new AsmCodeLine(SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0)),
-            new AsmCodeLine(WriteFunctionCall("Sys.init", 0)),
+            WriteFunctionCall("Sys.init", 0),
             new AsmCodeLine(WriteLabel("END")),
             new AsmCodeLine(UnconditionalJump("END", 0))
         };
@@ -520,42 +520,46 @@ public static class AsmWriter
                 new AsmCodeLine(UnconditionalJump(ReturnSubLabel, 1))
             });
     
-    private static string WriteFunctionDeclaration(string functionName, uint numLocals)
+    private static AsmCodeSection WriteFunctionDeclaration(string functionName, uint numLocals)
     {
-        var code =
-            OpenSectionComment($"Declare Function:{functionName} Locals:{numLocals}", 0) +
-            WriteLabel("$" + functionName);
-        
+        var codeLines = new List<AsmCodeLine>();
+        var codeSection = new AsmCodeSection(
+            $"Declare Function:{functionName} Locals:{numLocals}",
+            codeLines);
+            
+        codeLines.Add(new AsmCodeLine(WriteLabel("$" + functionName)));
+
         if (numLocals > 0)
         {
-            code += ValueToD(0.ToString(), 1);
+            codeLines.Add(new AsmCodeLine(ValueToD(0.ToString(), 1)));
             for (var i = 0; i < numLocals; i++)
             {
-                code += PushD(1);
+                codeLines.Add(new AsmCodeLine(PushD(1)));
             }
         }
-        
-        code += CloseSectionComment(0);
-        return code;
+
+        return codeSection;
     }
 
-    private static string WriteFunctionCall(string functionName, uint numArguments)
+    private static AsmCodeSection WriteFunctionCall(string functionName, uint numArguments)
     {
         var label = ReturnAddressLabel + _functionReturnLabelNum;
         string escapedFunctionName = "$" + functionName;
-        var code =
-            CommentLine($"[Call Function:{functionName} Args:{numArguments}] {{", 0) +
-            AInstruction(escapedFunctionName) +
-            PadLine("D=A") + Comment($"{escapedFunctionName}=> D", 1) +
-            DToMemory("R14", 1) +
-            AInstruction(numArguments.ToString()) +
-            PadLine("D=A") + Comment("Number Of Arguments => D", 1) +
-            DToMemory("R15", 1) +
-            AInstruction(label) +
-            PadLine("D=A") + Comment($"{escapedFunctionName}=> D", 1) +
-            UnconditionalJump(CallSubLabel, 1) +
-            WriteLabel(label) +
-            CloseSectionComment(0);
+        var code = new AsmCodeSection(
+            $"Call Function:{functionName} Args:{numArguments}",
+            new[]
+            {
+                new AsmCodeLine(AInstruction(escapedFunctionName)),
+                new AsmCodeLine("D=A", $"{escapedFunctionName}=> D"),
+                new AsmCodeLine(DToMemory("R14", 1)),
+                new AsmCodeLine(AInstruction(numArguments.ToString())),
+                new AsmCodeLine("D=A", "Number Of Arguments => D"),
+                new AsmCodeLine(DToMemory("R15", 1)),
+                new AsmCodeLine(AInstruction(label)),
+                new AsmCodeLine("D=A", $"{escapedFunctionName}=> D"),
+                new AsmCodeLine(UnconditionalJump(CallSubLabel, 1)),
+                new AsmCodeLine(WriteLabel(label))
+            });
         _functionReturnLabelNum++;
         return code;
     }
