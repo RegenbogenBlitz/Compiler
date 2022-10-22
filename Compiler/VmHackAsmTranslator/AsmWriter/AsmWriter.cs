@@ -52,39 +52,39 @@ public static class AsmWriter
                     switch (arithmeticCommand.ArithmeticCommandType)
                     {
                         case ArithmeticCommandType.Add:
-                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("+", "Add", "+")));
+                            asmOutputs.Add(WriteBinaryOperator("+", "Add", "+"));
                             break;
                         
                         case ArithmeticCommandType.Sub:
-                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("-", "Subtract", "-")));
+                            asmOutputs.Add(WriteBinaryOperator("-", "Subtract", "-"));
                             break;
                         
                         case ArithmeticCommandType.Neg:
-                            asmOutputs.Add(new AsmCodeLine(WriteUnaryOperator("-", "Negative", "-")));
+                            asmOutputs.Add(WriteUnaryOperator("-", "Negative", "-"));
                             break;
                         
                         case ArithmeticCommandType.And:
-                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("&", "And", "and")));
+                            asmOutputs.Add(WriteBinaryOperator("&", "And", "and"));
                             break;
                         
                         case ArithmeticCommandType.Or:
-                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("|", "Or", "or")));
+                            asmOutputs.Add(WriteBinaryOperator("|", "Or", "or"));
                             break;
                         
                         case ArithmeticCommandType.Not:
-                            asmOutputs.Add(new AsmCodeLine(WriteUnaryOperator("!", "Not", "not ")));
+                            asmOutputs.Add(WriteUnaryOperator("!", "Not", "not "));
                             break;
                         
                         case ArithmeticCommandType.Eq:
-                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel)));
+                            asmOutputs.Add(WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel));
                             break;
                         
                         case ArithmeticCommandType.Lt:
-                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel)));
+                            asmOutputs.Add(WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel));
                             break;
                         
                         case ArithmeticCommandType.Gt:
-                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel)));
+                            asmOutputs.Add(WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel));
                             break;
                         
                         default:
@@ -459,32 +459,39 @@ public static class AsmWriter
                 throw new InvalidOperationException("Should not be reachable");
         }
     }
-    
-    private static string WriteUnaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
-        OpenSectionComment(operatorName, 0) +
-        DropStack(1) +
-        OperatorMemoryToMemory(operatorSymbol, commentOperator, 1) +
-        LiftStack(1) +
-        CloseSectionComment(0);
 
-    private static string WriteBinaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
-        OpenSectionComment(operatorName, 0) +
-        BinaryOperatorToD(operatorSymbol, commentOperator, 1) +
-        PushD(1) +
-        CloseSectionComment(0);
+    private static AsmCodeSection WriteUnaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
+        new (operatorName,
+            new[]
+            {
+                new AsmCodeLine(DropStack(1)),
+                new AsmCodeLine(OperatorMemoryToMemory(operatorSymbol, commentOperator, 1)),
+                new AsmCodeLine(LiftStack(1)),
+            });
+
+    private static AsmCodeSection WriteBinaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
+        new(operatorName,
+            new[]
+            {
+                new AsmCodeLine(BinaryOperatorToD(operatorSymbol, commentOperator, 1)),
+                new AsmCodeLine(PushD(1))
+            });
     
-    private static string WriteComparison(string operatorName, string returnLabel, string subLabel)
+    private static AsmCodeSection WriteComparison(string operatorName, string returnLabel, string subLabel)
     {
         var label = returnLabel + _comparisionReturnLabelNum;
-        var equalsSection =
-            OpenSectionComment(operatorName, 0) +
-            OpenSectionComment($"Set R14 to '{label}'", 1) +
-            ValueToD(label, 2) +
-            DToMemory("R14", 2) +
-            CloseSectionComment(1) +
-            UnconditionalJump(subLabel, 1) +
-            WriteLabel(label) +
-            CloseSectionComment(0);
+        var equalsSection = new AsmCodeSection(operatorName,
+            new IAsmOutput[]
+            {
+                new AsmCodeSection($"Set R14 to '{label}'",
+                    new []
+                    {
+                        new AsmCodeLine(ValueToD(label, 2)),
+                        new AsmCodeLine(DToMemory("R14", 2))
+                    }),
+                new AsmCodeLine(UnconditionalJump(subLabel, 1)),
+                new AsmCodeLine(WriteLabel(label))
+            });
 
         _comparisionReturnLabelNum++;
         return equalsSection;
