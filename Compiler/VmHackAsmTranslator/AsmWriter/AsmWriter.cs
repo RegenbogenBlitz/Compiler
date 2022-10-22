@@ -165,8 +165,7 @@ public static class AsmWriter
                         new AsmCodeLine("M=0", "Leave 'false' on stack"),
                         new AsmCodeLine(string.Empty, "If D = 0 Then continue Else goto EndEqualsSubLabel"),
                         ConditionalJump("JNE", EndEqualsSubLabel),
-                        AInstruction("SP"),
-                        new AsmCodeLine("A=M-1"),
+                        DropStack(),
                         new AsmCodeLine("M=-1", "Leave 'true' on stack"),
                         WriteLabel(EndEqualsSubLabel),
                         UnconditionalJumpToAddressInMemory("R15")
@@ -182,8 +181,7 @@ public static class AsmWriter
                         new AsmCodeLine("M=0", "Leave 'false' on stack"),
                         new AsmCodeLine(string.Empty, "If D > 0 Then continue Else goto EndGreaterThanSubLabel"),
                         ConditionalJump("JLE", EndGreaterThanSubLabel),
-                        AInstruction("SP"),
-                        new AsmCodeLine("A=M-1"),
+                        DropStack(),
                         new AsmCodeLine("M=-1", "Leave 'true' on stack"),
                         WriteLabel(EndGreaterThanSubLabel),
                         UnconditionalJumpToAddressInMemory("R15")
@@ -472,9 +470,8 @@ public static class AsmWriter
         new(operatorName,
             new IAsmOutput[]
             {
-                DropStackAndPointToTopOfStack(),
-                new AsmCodeLine($"M={operatorSymbol}M", $"M <= {commentOperator}M"),
-                LiftStack()
+                DropStack(),
+                new AsmCodeLine($"M={operatorSymbol}M", $"M <= {commentOperator}M")
             });
 
     private static AsmCodeSection WriteBinaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
@@ -483,7 +480,9 @@ public static class AsmWriter
             {
                 PopToD(),
                 new AsmCodeLine("A=A-1", "SP <= SP - 1"),
-                new AsmCodeLine($"M=M{operatorSymbol}D", $"M <= M {commentOperator} D")
+                operatorSymbol == "-" 
+                    ? new AsmCodeLine("M=M-D", "M <= M - D")
+                    : new AsmCodeLine($"M=D{operatorSymbol}M", $"M <= M {commentOperator} D")
             });
     
     private static AsmCodeSection WriteComparison(string operatorName, string returnLabel, string subLabel)
@@ -611,6 +610,13 @@ public static class AsmWriter
             new AsmCodeLine("AM=M-1", "Drop Stack, Point to TopStack"),
         });
 
+    private static AsmCodeSection DropStack() =>
+        new(new []
+        {
+            AInstruction("SP"),
+            new AsmCodeLine("A=M-1", "Drop Stack"),
+        });
+    
     private static AsmCodeSection DToMemory(string memoryAddress, string? valueComment = null) =>
         new(new []
         {
