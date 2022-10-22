@@ -95,7 +95,7 @@ public static class AsmWriter
                 }
 
                 case LabelCommand labelCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteFunctionQualifiedLabel(labelCommand.FunctionName, labelCommand.Symbol)));
+                    asmOutputs.Add(WriteFunctionQualifiedLabel(labelCommand.FunctionName, labelCommand.Symbol));
                     break;
 
                 case IfGotoCommand ifGotoCommand:
@@ -564,8 +564,8 @@ public static class AsmWriter
         return code;
     }
 
-    private static string WriteFunctionQualifiedLabel(string functionName, string label) =>
-        WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label));
+    private static AsmCodeLine WriteFunctionQualifiedLabel(string functionName, string label) =>
+        new (WriteLabel(ToAsmFunctionQualifiedLabel(functionName, label)));
     
     private static string ToAsmFunctionQualifiedLabel(string functionName, string label) =>
         $"{functionName}${label}";
