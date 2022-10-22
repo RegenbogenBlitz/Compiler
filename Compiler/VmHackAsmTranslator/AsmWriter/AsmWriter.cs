@@ -286,7 +286,7 @@ public static class AsmWriter
                     }),
                 new AsmCodeLine(WriteLabel(SkipSubsLabel))
             }),
-            new AsmCodeLine(SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0)),
+            SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0),
             WriteFunctionCall("Sys.init", 0),
             new AsmCodeLine(WriteLabel("END")),
             new AsmCodeLine(UnconditionalJump("END", 0))
@@ -576,12 +576,14 @@ public static class AsmWriter
         PopToD(indentation) +
         DOperatorMemoryToD("R13", operatorSymbol, commentOperator, indentation);
     
-    private static string SetMemoryToValue(string memoryAddress, string value, int indentation) =>
-        OpenSectionComment($"Set {memoryAddress} to '{value}'", indentation) +
-        AInstruction(value) +
-        PadLine("D=A") + Comment($"{value} => D", indentation + 1) +
-        DToMemory(memoryAddress, indentation + 1) +
-        CloseSectionComment(indentation);
+    private static AsmCodeSection SetMemoryToValue(string memoryAddress, string value, int indentation) =>
+        new ($"Set {memoryAddress} to '{value}'",
+            new[]
+            {
+                new AsmCodeLine(AInstruction(value)),
+                new AsmCodeLine("D=A", $"{value} => D"),
+                new AsmCodeLine(DToMemory(memoryAddress, indentation + 1))
+            });
 
     private static string PushD(int indentation) =>
         DToTopStack(indentation) +
@@ -753,15 +755,6 @@ public static class AsmWriter
         AInstruction(memoryAddress) +
         PadLine("A=M") + Environment.NewLine +
         PadLine("0;JMP")  + Comment($"goto {memoryAddress}", indentation);
-    
-    private static string OpenSectionComment(string comment, int indentation)
-        => CommentLine("[" + comment +  "] {", indentation);
-
-    private static string CloseSectionComment(int indentation)
-        => CommentLine("}", indentation);
-    
-    private static string CommentLine(string comment, int indentation)
-        => PadLine("") + " // "+ "".PadRight(indentation * 3, ' ') + comment + Environment.NewLine;
     
     private static string Comment(string comment, int indentation)
         => " // "+ "".PadRight(indentation * 3, ' ') + comment + Environment.NewLine;
