@@ -33,18 +33,21 @@ public static class AsmWriter
         
     public static OutputFileInfo Write(string outputFileName, VmCode vmCode, bool writeWithComments)
     {
-        var output = WriteHeader();
+        var asmOutputs = new List<IAsmOutput>
+        {
+            new AsmCodeLine(WriteHeader())
+        };
 
         foreach (var command in vmCode.Commands)
         {
             switch (command)
             {
                 case PushCommand pushCommand:
-                    output += WritePush(pushCommand.ClassName, pushCommand.Segment, pushCommand.Index);
+                    asmOutputs.Add(new AsmCodeLine(WritePush(pushCommand.ClassName, pushCommand.Segment, pushCommand.Index)));
                     break;
 
                 case PopCommand popCommand:
-                    output += WritePop(popCommand.ClassName, popCommand.Segment, popCommand.Index, 0);
+                    asmOutputs.Add(new AsmCodeLine(WritePop(popCommand.ClassName, popCommand.Segment, popCommand.Index, 0)));
                     break;
 
                 case ArithmeticCommand arithmeticCommand:
@@ -52,39 +55,39 @@ public static class AsmWriter
                     switch (arithmeticCommand.ArithmeticCommandType)
                     {
                         case ArithmeticCommandType.Add:
-                            output += WriteBinaryOperator("+", "Add", "+");
+                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("+", "Add", "+")));
                             break;
                         
                         case ArithmeticCommandType.Sub:
-                            output += WriteBinaryOperator("-", "Subtract", "-");
+                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("-", "Subtract", "-")));
                             break;
                         
                         case ArithmeticCommandType.Neg:
-                            output += WriteUnaryOperator("-", "Negative", "-");
+                            asmOutputs.Add(new AsmCodeLine(WriteUnaryOperator("-", "Negative", "-")));
                             break;
                         
                         case ArithmeticCommandType.And:
-                            output += WriteBinaryOperator("&", "And", "and");
+                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("&", "And", "and")));
                             break;
                         
                         case ArithmeticCommandType.Or:
-                            output += WriteBinaryOperator("|", "Or", "or");
+                            asmOutputs.Add(new AsmCodeLine(WriteBinaryOperator("|", "Or", "or")));
                             break;
                         
                         case ArithmeticCommandType.Not:
-                            output += WriteUnaryOperator("!", "Not", "not ");
+                            asmOutputs.Add(new AsmCodeLine(WriteUnaryOperator("!", "Not", "not ")));
                             break;
                         
                         case ArithmeticCommandType.Eq:
-                            output += WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel);
+                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Equals", EqualsReturnLabel, EqualsSubLabel)));
                             break;
                         
                         case ArithmeticCommandType.Lt:
-                            output += WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel);
+                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Less Than", LessThanReturnLabel, LessThanSubLabel)));
                             break;
                         
                         case ArithmeticCommandType.Gt:
-                            output += WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel);
+                            asmOutputs.Add(new AsmCodeLine(WriteComparison("Greater Than", GreaterThanReturnLabel, GreaterThanSubLabel)));
                             break;
                         
                         default:
@@ -95,34 +98,32 @@ public static class AsmWriter
                 }
 
                 case LabelCommand labelCommand:
-                    output += WriteFunctionQualifiedLabel(labelCommand.FunctionName, labelCommand.Symbol);
+                    asmOutputs.Add(new AsmCodeLine(WriteFunctionQualifiedLabel(labelCommand.FunctionName, labelCommand.Symbol)));
                     break;
 
                 case IfGotoCommand ifGotoCommand:
-                    output += WriteIfGoto(ifGotoCommand.FunctionName, ifGotoCommand.Symbol);
+                    asmOutputs.Add(new AsmCodeLine(WriteIfGoto(ifGotoCommand.FunctionName, ifGotoCommand.Symbol)));
                     break;
                     
                 case GotoCommand gotoCommand:
-                    output += WriteGoto(gotoCommand.FunctionName, gotoCommand.Symbol);
+                    asmOutputs.Add(new AsmCodeLine(WriteGoto(gotoCommand.FunctionName, gotoCommand.Symbol)));
                     break;
 
                 case ReturnCommand:
-                    output += WriteReturn();
+                    asmOutputs.Add(new AsmCodeLine(WriteReturn()));
                     break;
 
                 case FunctionDeclarationCommand functionDeclarationCommand:
-                    output += WriteFunctionDeclaration(
+                    asmOutputs.Add(new AsmCodeLine(WriteFunctionDeclaration(
                         functionDeclarationCommand.FunctionName,
-                        functionDeclarationCommand.NumLocals);
+                        functionDeclarationCommand.NumLocals)));
                     break;
                     
                 case FunctionCallCommand functionCallCommand:
-                {
-                    output += WriteFunctionCall(
+                    asmOutputs.Add(new AsmCodeLine(WriteFunctionCall(
                         functionCallCommand.FunctionName,
-                        functionCallCommand.NumArguments);
+                        functionCallCommand.NumArguments)));
                     break;
-                }
                 
                 case NonCommand:
                     // Do Nothing
@@ -132,13 +133,12 @@ public static class AsmWriter
                     throw new InvalidOperationException("Should not be reachable");
             }
         }
-
-        var asmCodeSection = new AsmCodeSection(new[] { new AsmCodeLine(output) });
+        var asmCodeSection = new AsmCodeSection(asmOutputs);
         var outputLines = 
             writeWithComments 
                 ? asmCodeSection.WriteWithComments(0)
                 : asmCodeSection.WriteWithoutComments();
-        output = string.Join(Environment.NewLine, outputLines);
+        var output = string.Join(Environment.NewLine, outputLines);
         
         return new OutputFileInfo(outputFileName, "asm", output);
     }
