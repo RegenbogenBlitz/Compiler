@@ -45,10 +45,10 @@ public class VmCodeParser
                     return false;
                 }
 
-                return functionDeclarationCommand.FunctionName == "Sys.init";
+                return functionDeclarationCommand.FunctionName == "sys.init";
             }))
         {
-            throw new ParserException("No function Sys.init found.");
+            throw new ParserException("No function sys.init found.");
         }
 
         var declaredFunctionNames = new Dictionary<string, LineInfo>();
@@ -247,7 +247,7 @@ public class VmCodeParser
                         "expected 'function FUNCTION_NAME NUMBER_OF_LOCALS', where NUMBER_OF_LOCALS is positive integer");
                 }
                 
-                functionName = lineComponents[1];
+                functionName = lineComponents[1].ToLower();
                 return new FunctionDeclarationCommand(functionName, numLocals);
             }
                 
@@ -266,7 +266,7 @@ public class VmCodeParser
                         "expected 'call FUNCTION_NAME NUMBER_OF_ARGUMENTS', where NUMBER_OF_ARGUMENTS is positive integer");
                 }
                 
-                var calledFunctionName = lineComponents[1];
+                var calledFunctionName = lineComponents[1].ToLower();
                 return new FunctionCallCommand(calledFunctionName, numArguments);
             }
 

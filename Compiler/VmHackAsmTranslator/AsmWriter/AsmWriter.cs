@@ -18,9 +18,9 @@ public static class AsmWriter
     private const string StartGreaterThanSubLabel = "START_GT";
     private const string EndGreaterThanSubLabel = "END_GT";
     
-    private const string EqualsReturnLabel = "EQUALS_RETURN_";
-    private const string LessThanReturnLabel = "LESSTHAN_RETURN_";
-    private const string GreaterThanReturnLabel = "GREATERTHAN_RETURN_";
+    private const string EqualsReturnLabel = "RET_ADDRESS_EQ";
+    private const string LessThanReturnLabel = "RET_ADDRESS_LT";
+    private const string GreaterThanReturnLabel = "RET_ADDRESS_GT";
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static int _comparisionReturnLabelNum = 0;
     
@@ -400,16 +400,14 @@ public static class AsmWriter
                 return new AsmCodeSection($"Pop M(M(ARG) + {index})",
                     new []
                     {
-                        OffsetMemoryToMemory("ARG", "Argument", index, "R13"),
-                        PopToIndirectMemory("R13", index, $"M(ARG) + {index}")
+                        PopToIndirectMemory("ARG", index)
                     });
             
             case SegmentType.Local:
                 return new AsmCodeSection($"Pop M(M(LCL) + {index})",
                     new []
                     {
-                        OffsetMemoryToMemory("LCL", "Local", index, "R13"),
-                        PopToIndirectMemory("R13", index, $"M(LCL) + {index}")
+                        PopToIndirectMemory("LCL", index)
                     });
             
             case SegmentType.Static:
@@ -524,29 +522,40 @@ public static class AsmWriter
     
     private static AsmCodeSection WriteFunctionDeclaration(string functionName, uint numLocals)
     {
-        var codeLines = new List<IAsmOutput>();
-        var codeSection = new AsmCodeSection(
-            $"Declare Function:{functionName} Locals:{numLocals}",
-            codeLines);
-            
-        codeLines.Add(WriteLabel("$" + functionName));
-
-        if (numLocals > 0)
+        if (numLocals == 0)
         {
-            codeLines.Add(ValueToD("0"));
-            for (var i = 0; i < numLocals; i++)
-            {
-                codeLines.Add(PushD_SpPointsAboveTopStackValue());
-            }
+            return new AsmCodeSection(
+                $"Declare Function:{functionName} Locals:{numLocals}",
+                new []
+                {
+                    WriteLabel(functionName)
+                });
         }
-
-        return codeSection;
+        else
+        {
+            var loopLabel = $"LOOP_{functionName}";
+            return new AsmCodeSection(
+                $"Declare Function:{functionName} Locals:{numLocals}",
+                new IAsmOutput[]
+                {
+                    WriteLabel(functionName),
+                    ValueToD(numLocals.ToString()),
+                    WriteLabel(loopLabel),
+                    new AsmCodeLine("D=D-1", "D--"),
+                    AInstruction("SP"),
+                    new AsmCodeLine("AM=M+1", "Lift stack and point to above top-stack-value"),
+                    new AsmCodeLine("A=A-1", "A = address of top-stack-value"),
+                    new AsmCodeLine("M=0"),
+                    AInstruction(loopLabel),
+                    new AsmCodeLine("D;JGT", "while D > 0")
+                });
+        }
     }
 
     private static AsmCodeSection WriteFunctionCall(string functionName, uint numArguments)
     {
         var label = ReturnAddressLabel + _functionReturnLabelNum;
-        string escapedFunctionName = "$" + functionName;
+        string escapedFunctionName = functionName;
         var code = new AsmCodeSection(
             $"Call Function:{functionName} Args:{numArguments}",
             new IAsmOutput[]
@@ -711,7 +720,7 @@ public static class AsmWriter
                 new AsmCodeLine("M=D", $"M(M({memoryAddress}) + 1) <= {(string.IsNullOrEmpty(valueComment) ? "D" : valueComment)}")
             });
         }
-        else if (index < 5)
+        else if (index <= 6)
         {
             var asmOutput = new List<IAsmOutput>
             {
@@ -742,35 +751,6 @@ public static class AsmWriter
                 AInstruction("R13"),
                 new AsmCodeLine("A=M", $"A <= M({memoryAddress})  + {index}"),
                 new AsmCodeLine("M=D", $"M(M({memoryAddress})  + {index}) <= {(string.IsNullOrEmpty(valueComment) ? "D" : valueComment)}")
-            });
-        }
-    }
-        
-
-    private static AsmCodeSection OffsetMemoryToMemory(
-        string fromMemoryAddress,
-        string commentFromMemoryAddress,
-        uint index,
-        string toMemoryAddress)
-    {
-        if (index == 0)
-        {
-            return new(new IAsmOutput[]
-            {
-                AInstruction(fromMemoryAddress),
-                new AsmCodeLine("D=M", $"D <= M({commentFromMemoryAddress})"),
-                DToMemory(toMemoryAddress)
-            });
-        }
-        else
-        {
-            return new(new IAsmOutput[]
-            {
-                AInstruction(fromMemoryAddress),
-                new AsmCodeLine("D=M", $"D <= M({commentFromMemoryAddress})"),
-                AInstruction(index.ToString()),
-                new AsmCodeLine("D=D+A", $"D <= M({commentFromMemoryAddress}) + {index}"),
-                DToMemory(toMemoryAddress),
             });
         }
     }
