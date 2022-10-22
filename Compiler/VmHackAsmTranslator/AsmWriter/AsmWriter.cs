@@ -44,7 +44,7 @@ public static class AsmWriter
                     break;
 
                 case PopCommand popCommand:
-                    asmOutputs.Add(new AsmCodeLine(WritePop(popCommand.ClassName, popCommand.Segment, popCommand.Index, 0)));
+                    asmOutputs.Add(WritePop(popCommand.ClassName, popCommand.Segment, popCommand.Index, 0));
                     break;
 
                 case ArithmeticCommand arithmeticCommand:
@@ -212,7 +212,7 @@ public static class AsmWriter
                         }),
                         new AsmCodeSection("*ARG = pop()", new[]
                         {
-                            new AsmCodeLine(WritePop(string.Empty, SegmentType.Argument, 0, 3))
+                            WritePop(string.Empty, SegmentType.Argument, 0, 3)
                         }),
                         new AsmCodeSection("SP = ARG + 1", new[]
                         {
@@ -369,80 +369,89 @@ public static class AsmWriter
         }
     }
 
-    private static string WritePop(string className, SegmentType segment, uint index, int indentation)
+    private static AsmCodeSection WritePop(string className, SegmentType segment, uint index, int indentation)
     {
+        
+        
         switch (segment)
         {
             case SegmentType.Argument:
-                return
-                    OpenSectionComment($"Pop M[M[Argument] + {index}]", indentation) +
-                    OffsetMemoryToMemory("ARG", "Argument", index, "R13", indentation + 1) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    DToIndirectMemory("R13", $"M[Argument] + {index}", indentation + 1) +
-                    CloseSectionComment(indentation);
+                return new AsmCodeSection($"Pop M[M[Argument] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(OffsetMemoryToMemory("ARG", "Argument", index, "R13", indentation + 1)),
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine(DToIndirectMemory("R13", $"M[Argument] + {index}", indentation + 1))
+                    });
             
             case SegmentType.Local:
-                return
-                    OpenSectionComment($"Pop M[M[Local] + {index}]", indentation) +
-                    OffsetMemoryToMemory("LCL", "Local", index, "R13", indentation + 1) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    DToIndirectMemory("R13", $"M[Local] + {index}", indentation + 1) +
-                    CloseSectionComment(indentation);
+                return new AsmCodeSection($"Pop M[M[Local] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(OffsetMemoryToMemory("LCL", "Local", index, "R13", indentation + 1)),
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine(DToIndirectMemory("R13", $"M[Local] + {index}", indentation + 1))
+                    });
             
             case SegmentType.Static:
-                return
-                    OpenSectionComment($"Pop M[Static {index}]", indentation) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    AInstruction($"{className}.{index}") +
-                    PadLine("M=D") + Comment($"D => M[Static {index}]", indentation + 1) +
-                    CloseSectionComment(indentation);
+                return new AsmCodeSection($"Pop M[Static {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine(AInstruction($"{className}.{index}")),
+                        new AsmCodeLine("M=D", $"D => M[Static {index}]")
+                    });
             
             case SegmentType.This:
-                return
-                    OpenSectionComment($"Pop M[M[This] + {index}]", indentation) +
-                    OffsetMemoryToMemory("THIS", "This", index, "R13", indentation + 1) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    DToIndirectMemory("R13", $"M[This] + {index}", indentation + 1) +
-                    CloseSectionComment(indentation);
+                return new AsmCodeSection($"Pop M[M[This] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(OffsetMemoryToMemory("THIS", "This", index, "R13", indentation + 1)),
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine(DToIndirectMemory("R13", $"M[This] + {index}", indentation + 1) )
+                    });
             
             case SegmentType.That:
-                return
-                    OpenSectionComment($"Pop M[M[That] + {index}]", indentation) +
-                    OffsetMemoryToMemory("THAT", "That", index, "R13", indentation + 1) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    DToIndirectMemory("R13", $"M[That] + {index}", indentation + 1) +
-                    CloseSectionComment(indentation);
-
+                return new AsmCodeSection($"Pop M[M[That] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(OffsetMemoryToMemory("THAT", "That", index, "R13", indentation + 1)),
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine(DToIndirectMemory("R13", $"M[That] + {index}", indentation + 1))
+                    });
             case SegmentType.Pointer:
             {
                 var pointerAddress = BasePointerAddress + index;
                 var memoryAddressComment = $"pointer + {index}";
-                return
-                    OpenSectionComment($"Pop M[pointer + {index}]", indentation) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    PadLine($"@{pointerAddress.ToString()}") +
-                    Comment($"{memoryAddressComment} => A", indentation + 1) +
-                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", indentation + 1) +
-                    CloseSectionComment(indentation);
+                
+                return new AsmCodeSection($"Pop M[pointer + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine($"@{pointerAddress.ToString()}", $"{memoryAddressComment} => A"),
+                        new AsmCodeLine("M=D", $"D => {memoryAddressComment}")
+                    });
             }
 
             case SegmentType.Temp:
             {
                 var tempAddress = BaseTempAddress + index;
                 var memoryAddressComment = $"temp + {index}";
-                return
-                    OpenSectionComment($"Pop M[temp + {index}]", indentation) +
-                    DropStack(indentation + 1) +
-                    TopStackToD(indentation + 1) +
-                    PadLine($"@{tempAddress.ToString()}") + Comment($"{memoryAddressComment} => A", indentation + 1) +
-                    PadLine("M=D") + Comment($"D => {memoryAddressComment}", indentation + 1) +
-                    CloseSectionComment(indentation);
+                
+                return new AsmCodeSection($"Pop M[temp + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(DropStack(indentation + 1)),
+                        new AsmCodeLine(TopStackToD(indentation + 1)),
+                        new AsmCodeLine($"@{tempAddress.ToString()}", $"{memoryAddressComment} => A"),
+                        new AsmCodeLine("M=D", $"D => {memoryAddressComment}")
+                    });
             }
             // ReSharper disable once RedundantCaseLabel
             case SegmentType.Constant:
