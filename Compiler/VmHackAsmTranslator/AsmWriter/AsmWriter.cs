@@ -99,15 +99,15 @@ public static class AsmWriter
                     break;
 
                 case IfGotoCommand ifGotoCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteIfGoto(ifGotoCommand.FunctionName, ifGotoCommand.Symbol)));
+                    asmOutputs.Add(WriteIfGoto(ifGotoCommand.FunctionName, ifGotoCommand.Symbol));
                     break;
                     
                 case GotoCommand gotoCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteGoto(gotoCommand.FunctionName, gotoCommand.Symbol)));
+                    asmOutputs.Add(WriteGoto(gotoCommand.FunctionName, gotoCommand.Symbol));
                     break;
 
                 case ReturnCommand:
-                    asmOutputs.Add(new AsmCodeLine(WriteReturn()));
+                    asmOutputs.Add(WriteReturn());
                     break;
 
                 case FunctionDeclarationCommand functionDeclarationCommand:
@@ -497,22 +497,28 @@ public static class AsmWriter
         return equalsSection;
     }
 
-    private static string WriteIfGoto(string functionName, string label) =>
-        OpenSectionComment($"If-Goto {ToAsmFunctionQualifiedLabel(functionName, label)}", 0) +
-        DropStack(1) +
-        TopStackToD(1) +
-        ConditionalJump("JNE", ToAsmFunctionQualifiedLabel(functionName, label), 1) +
-        CloseSectionComment(0);
+    private static AsmCodeSection WriteIfGoto(string functionName, string label) =>
+        new($"If-Goto {ToAsmFunctionQualifiedLabel(functionName, label)}",
+            new[]
+            {
+                new AsmCodeLine(DropStack(1)),
+                new AsmCodeLine(TopStackToD(1)),
+                new AsmCodeLine(ConditionalJump("JNE", ToAsmFunctionQualifiedLabel(functionName, label), 1))
+            });
     
-    private static string WriteGoto(string functionName, string label) =>
-        OpenSectionComment($"Goto {ToAsmFunctionQualifiedLabel(functionName, label)}", 0) +
-        UnconditionalJump(ToAsmFunctionQualifiedLabel(functionName, label), 1) +
-        CloseSectionComment(0);
+    private static AsmCodeSection WriteGoto(string functionName, string label) =>
+        new($"Goto {ToAsmFunctionQualifiedLabel(functionName, label)}",
+            new[]
+            {
+                new AsmCodeLine(UnconditionalJump(ToAsmFunctionQualifiedLabel(functionName, label), 1))
+            });
     
-    private static string WriteReturn() =>
-        OpenSectionComment("Return", 0) +
-        UnconditionalJump(ReturnSubLabel, 1) +
-        CloseSectionComment(0);
+    private static AsmCodeSection WriteReturn() =>
+        new("Return",
+            new[]
+            {
+                new AsmCodeLine(UnconditionalJump(ReturnSubLabel, 1))
+            });
     
     private static string WriteFunctionDeclaration(string functionName, uint numLocals)
     {
