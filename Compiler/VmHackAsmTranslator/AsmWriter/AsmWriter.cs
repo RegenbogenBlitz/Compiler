@@ -151,7 +151,7 @@ public static class AsmWriter
                     new IAsmOutput[]
                     {
                         WriteLabel(EqualsSubLabel),
-                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        BinaryOperatorToD("-", "-", 2),
                         new AsmCodeLine(string.Empty, "If D = 0 Then Goto IsTrue Else Goto IsFalse"),
                         ConditionalJump("JEQ", IsTrueLabel),
                         UnconditionalJump(IsFalseLabel)
@@ -160,7 +160,7 @@ public static class AsmWriter
                     new IAsmOutput[]
                     {
                         WriteLabel(LessThanSubLabel),
-                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        BinaryOperatorToD("-", "-", 2),
                         new AsmCodeLine(string.Empty, "If D < 0 Then Goto IsTrue Else Goto IsFalse"),
                         ConditionalJump("JLT", IsTrueLabel),
                         UnconditionalJump(IsFalseLabel)
@@ -169,7 +169,7 @@ public static class AsmWriter
                     new IAsmOutput[]
                     {
                         WriteLabel(GreaterThanSubLabel),
-                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        BinaryOperatorToD("-", "-", 2),
                         new AsmCodeLine(string.Empty, "If D > 0 Then Goto IsTrue Else Goto IsFalse"),
                         ConditionalJump("JGT", IsTrueLabel),
                         UnconditionalJump(IsFalseLabel)
@@ -180,7 +180,7 @@ public static class AsmWriter
                         new AsmCodeSection("Is True", new IAsmOutput[]
                         {
                             WriteLabel(IsTrueLabel),
-                            new AsmCodeLine(NegativeValueToD("1", 3)),
+                            NegativeValueToD("1"),
                             new AsmCodeLine(DToTopStack(3)),
                             new AsmCodeLine(LiftStack(3)),
                             UnconditionalJumpToAddressInMemory("R14")
@@ -255,19 +255,19 @@ public static class AsmWriter
                     new IAsmOutput[]
                     {
                         WriteLabel(CallSubLabel),
-                        new AsmCodeLine(PushD(2)),
+                        PushD(2),
                         new AsmCodeLine(AInstruction("LCL")),
                         new AsmCodeLine("D=M", "M[LCL] => D "),
-                        new AsmCodeLine(PushD(2)),
+                        PushD(2),
                         new AsmCodeLine(AInstruction("ARG")),
                         new AsmCodeLine("D=M", "M[ARG] => D "),
-                        new AsmCodeLine(PushD(2)),
+                        PushD(2),
                         new AsmCodeLine(AInstruction("THIS")),
                         new AsmCodeLine("D=M", "M[THIS] => D "),
-                        new AsmCodeLine(PushD(2)),
+                        PushD(2),
                         new AsmCodeLine(AInstruction("THAT")),
                         new AsmCodeLine("D=M", "M[THAT] => D "),
-                        new AsmCodeLine(PushD(2)),
+                        PushD(2),
                         new AsmCodeLine(AInstruction("R15")),
                         new AsmCodeLine("D=M", "M[R15] => D "),
                         new AsmCodeLine(AInstruction("5")),
@@ -297,70 +297,70 @@ public static class AsmWriter
         {
             case SegmentType.Argument:
                 return new AsmCodeSection($"Push M[M[Argument] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(IndirectMemoryToD("ARG", index, "Argument", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.Local:
                 return new AsmCodeSection($"Push M[M[Local] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(IndirectMemoryToD("LCL", index, "Local", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.Static:
                 return new AsmCodeSection($"Push M[Static {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(MemoryToD($"{className}.{index}", $"M[M[Static {index}]]", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.Constant:
                 return new AsmCodeSection($"Push Constant '{index}'",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(ValueToD(index.ToString(), 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.This:
                 return new AsmCodeSection($"Push M[M[This] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(IndirectMemoryToD("THIS", index, "This", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.That:
                 return new AsmCodeSection($"Push M[M[That] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(IndirectMemoryToD("THAT", index, "That", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.Pointer:
                 var pointerAddress = BasePointerAddress + index;
                 
                 return new AsmCodeSection($"Push M[pointer + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(MemoryToD(pointerAddress.ToString(), $"pointer + {index}", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             case SegmentType.Temp:
                 var tempAddress = BaseTempAddress + index;
                 
                 return new AsmCodeSection($"Push M[temp + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
                         new AsmCodeLine(MemoryToD(tempAddress.ToString(), $"temp + {index}", 1)),
-                        new AsmCodeLine(PushD(1))
+                        PushD(1)
                     });
             
             default:
@@ -376,22 +376,22 @@ public static class AsmWriter
         {
             case SegmentType.Argument:
                 return new AsmCodeSection($"Pop M[M[Argument] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
-                        new AsmCodeLine(OffsetMemoryToMemory("ARG", "Argument", index, "R13", indentation + 1)),
+                        OffsetMemoryToMemory("ARG", "Argument", index, "R13", indentation + 1),
                         new AsmCodeLine(DropStack(indentation + 1)),
                         new AsmCodeLine(TopStackToD(indentation + 1)),
-                        new AsmCodeLine(DToIndirectMemory("R13", $"M[Argument] + {index}", indentation + 1))
+                        DToIndirectMemory("R13", $"M[Argument] + {index}")
                     });
             
             case SegmentType.Local:
                 return new AsmCodeSection($"Pop M[M[Local] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
-                        new AsmCodeLine(OffsetMemoryToMemory("LCL", "Local", index, "R13", indentation + 1)),
+                        OffsetMemoryToMemory("LCL", "Local", index, "R13", indentation + 1),
                         new AsmCodeLine(DropStack(indentation + 1)),
                         new AsmCodeLine(TopStackToD(indentation + 1)),
-                        new AsmCodeLine(DToIndirectMemory("R13", $"M[Local] + {index}", indentation + 1))
+                        DToIndirectMemory("R13", $"M[Local] + {index}")
                     });
             
             case SegmentType.Static:
@@ -406,22 +406,22 @@ public static class AsmWriter
             
             case SegmentType.This:
                 return new AsmCodeSection($"Pop M[M[This] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
-                        new AsmCodeLine(OffsetMemoryToMemory("THIS", "This", index, "R13", indentation + 1)),
+                        OffsetMemoryToMemory("THIS", "This", index, "R13", indentation + 1),
                         new AsmCodeLine(DropStack(indentation + 1)),
                         new AsmCodeLine(TopStackToD(indentation + 1)),
-                        new AsmCodeLine(DToIndirectMemory("R13", $"M[This] + {index}", indentation + 1) )
+                       DToIndirectMemory("R13", $"M[This] + {index}")
                     });
             
             case SegmentType.That:
                 return new AsmCodeSection($"Pop M[M[That] + {index}]",
-                    new[]
+                    new IAsmOutput[]
                     {
-                        new AsmCodeLine(OffsetMemoryToMemory("THAT", "That", index, "R13", indentation + 1)),
+                        OffsetMemoryToMemory("THAT", "That", index, "R13", indentation + 1),
                         new AsmCodeLine(DropStack(indentation + 1)),
                         new AsmCodeLine(TopStackToD(indentation + 1)),
-                        new AsmCodeLine(DToIndirectMemory("R13", $"M[That] + {index}", indentation + 1))
+                        DToIndirectMemory("R13", $"M[That] + {index}")
                     });
             case SegmentType.Pointer:
             {
@@ -470,10 +470,10 @@ public static class AsmWriter
 
     private static AsmCodeSection WriteBinaryOperator(string operatorSymbol, string operatorName, string commentOperator) =>
         new(operatorName,
-            new[]
+            new []
             {
-                new AsmCodeLine(BinaryOperatorToD(operatorSymbol, commentOperator, 1)),
-                new AsmCodeLine(PushD(1))
+                BinaryOperatorToD(operatorSymbol, commentOperator, 1),
+                PushD(1)
             });
     
     private static AsmCodeSection WriteComparison(string operatorName, string returnLabel, string subLabel)
@@ -521,7 +521,7 @@ public static class AsmWriter
     
     private static AsmCodeSection WriteFunctionDeclaration(string functionName, uint numLocals)
     {
-        var codeLines = new List<AsmCodeLine>();
+        var codeLines = new List<IAsmOutput>();
         var codeSection = new AsmCodeSection(
             $"Declare Function:{functionName} Locals:{numLocals}",
             codeLines);
@@ -533,7 +533,7 @@ public static class AsmWriter
             codeLines.Add(new AsmCodeLine(ValueToD(0.ToString(), 1)));
             for (var i = 0; i < numLocals; i++)
             {
-                codeLines.Add(new AsmCodeLine(PushD(1)));
+                codeLines.Add(PushD(1));
             }
         }
 
@@ -568,12 +568,15 @@ public static class AsmWriter
     
     private static string ToAsmFunctionQualifiedLabel(string functionName, string label) =>
         $"{functionName}${label}";
-    
-    private static string BinaryOperatorToD(string operatorSymbol, string commentOperator, int indentation) =>
-        PopToD(indentation) +
-        DToMemory("R13", indentation) +
-        PopToD(indentation) +
-        DOperatorMemoryToD("R13", operatorSymbol, commentOperator, indentation);
+
+    private static AsmCodeSection BinaryOperatorToD(string operatorSymbol, string commentOperator, int indentation) =>
+        new(new IAsmOutput[]
+        {
+            PopToD(indentation),
+            new AsmCodeLine(DToMemory("R13", indentation)),
+            PopToD(indentation),
+            new AsmCodeLine(DOperatorMemoryToD("R13", operatorSymbol, commentOperator, indentation))
+        });
     
     private static AsmCodeSection SetMemoryToValue(string memoryAddress, string value, int indentation) =>
         new ($"Set {memoryAddress} to '{value}'",
@@ -584,13 +587,19 @@ public static class AsmWriter
                 new AsmCodeLine(DToMemory(memoryAddress, indentation + 1))
             });
 
-    private static string PushD(int indentation) =>
-        DToTopStack(indentation) +
-        LiftStack(indentation);
+    private static AsmCodeSection PushD(int indentation) =>
+        new(new AsmCodeLine[]
+        {
+            new(DToTopStack(indentation)),
+            new(LiftStack(indentation))
+        });
 
-    private static string PopToD(int indentation) =>
-        DropStack(indentation) +
-        TopStackToD(indentation);
+    private static AsmCodeSection PopToD(int indentation) =>
+        new(new AsmCodeLine[]
+        {
+            new(DropStack(indentation)),
+            new(TopStackToD(indentation))
+        });
 
     private static string DToMemory(string memoryAddress, int indentation) =>
         AInstruction(memoryAddress) +
@@ -603,10 +612,13 @@ public static class AsmWriter
     private static string ValueToD(string value, int indentation) =>
         AInstruction(value) +
         PadLine("D=A") + Comment($"{value} => D", indentation);
-    
-    private static string NegativeValueToD(string value, int indentation) =>
-        AInstruction(value) +
-        PadLine("D=-A") + Comment($"-{value} => D", indentation);
+
+    private static AsmCodeSection NegativeValueToD(string value) =>
+        new(new AsmCodeLine[]
+        {
+            new(AInstruction(value)),
+            new("D=-A", $"-{value} => D")
+        });
     
     private static string DOperatorMemoryToD(string memoryAddress, string operatorSymbol, string commentOperator, int indentation) =>
         AInstruction(memoryAddress) +
@@ -631,13 +643,16 @@ public static class AsmWriter
                 PadLine("D=M") + Comment($"M[M[{commentMemoryAddress}] + {index}] => D", indentation);
         }
     }
-        
-    private static string DToIndirectMemory(string memoryAddress, string commentMemoryAddress, int indentation) =>  
-        AInstruction(memoryAddress) +
-        PadLine("A=M") + Comment($"{commentMemoryAddress} => A", indentation) +
-        PadLine("M=D") + Comment($"D => {commentMemoryAddress}", indentation);
 
-    private static string OffsetMemoryToMemory(
+    private static AsmCodeSection DToIndirectMemory(string memoryAddress, string commentMemoryAddress) =>
+        new(new[]
+        {
+            new AsmCodeLine(AInstruction(memoryAddress)),
+            new AsmCodeLine("A=M", $"{commentMemoryAddress} => A"),
+            new AsmCodeLine("M=D", $"D => {commentMemoryAddress}")
+        });
+
+    private static AsmCodeSection OffsetMemoryToMemory(
         string fromMemoryAddress,
         string commentFromMemoryAddress,
         uint index,
@@ -646,19 +661,23 @@ public static class AsmWriter
     {
         if (index == 0)
         {
-            return
-                AInstruction(fromMemoryAddress) +
-                PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
-                DToMemory(toMemoryAddress, indentation);
+            return new(new[]
+            {
+                new AsmCodeLine(AInstruction(fromMemoryAddress)),
+                new AsmCodeLine("D=M", $"M[{commentFromMemoryAddress}] => D"),
+                new AsmCodeLine(DToMemory(toMemoryAddress, indentation))
+            });
         }
         else
         {
-            return
-                AInstruction(fromMemoryAddress) +
-                PadLine("D=M") + Comment($"M[{commentFromMemoryAddress}] => D", indentation) +
-                AInstruction(index.ToString()) +
-                PadLine("D=D+A") + Comment($"M[{commentFromMemoryAddress}] + {index} => D", indentation) +
-                DToMemory(toMemoryAddress, indentation);
+            return new(new[]
+            {
+                new AsmCodeLine(AInstruction(fromMemoryAddress)),
+                new AsmCodeLine("D=M", $"M[{commentFromMemoryAddress}] => D"),
+                new AsmCodeLine(AInstruction(index.ToString())),
+                new AsmCodeLine("D=D+A", $"M[{commentFromMemoryAddress}] + {index} => D"),
+                new AsmCodeLine(DToMemory(toMemoryAddress, indentation)),
+            });
         }
     }
 
