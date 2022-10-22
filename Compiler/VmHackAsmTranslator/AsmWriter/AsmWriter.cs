@@ -33,10 +33,7 @@ public static class AsmWriter
         
     public static OutputFileInfo Write(string outputFileName, VmCode vmCode, bool writeWithComments)
     {
-        var asmOutputs = new List<IAsmOutput>
-        {
-            new AsmCodeLine(WriteHeader())
-        };
+        var asmOutputs = new List<IAsmOutput>(WriteHeader());
 
         foreach (var command in vmCode.Commands)
         {
@@ -133,159 +130,167 @@ public static class AsmWriter
                     throw new InvalidOperationException("Should not be reachable");
             }
         }
-        var asmCodeSection = new AsmCodeSection(asmOutputs);
-        var outputLines = 
-            writeWithComments 
-                ? asmCodeSection.WriteWithComments(0)
-                : asmCodeSection.WriteWithoutComments();
+
+        var outputLines =
+            asmOutputs.SelectMany(ao =>
+                writeWithComments
+                    ? ao.WriteWithComments(0)
+                    : ao.WriteWithoutComments());
         var output = string.Join(Environment.NewLine, outputLines);
         
         return new OutputFileInfo(outputFileName, "asm", output);
     }
 
-    private static string WriteHeader() =>
-        OpenSectionComment("Reusable Sub Routines", 0) +
-        UnconditionalJump(SkipSubsLabel, 1) +
-
-        OpenSectionComment("Equals", 1) +
-        WriteLabel(EqualsSubLabel) +
-        BinaryOperatorToD("-", "-", 2) +
-        PadLine("") + Comment("If D = 0 Then Goto IsTrue Else Goto IsFalse", 2) +
-        ConditionalJump("JEQ", IsTrueLabel, 2) +
-        UnconditionalJump(IsFalseLabel, 2) +
-        CloseSectionComment(1) +
-
-        OpenSectionComment("Is Less Than", 1) +
-        WriteLabel(LessThanSubLabel) +
-        BinaryOperatorToD("-", "-", 2) +
-        PadLine("") + Comment("If D < 0 Then Goto IsTrue Else Goto IsFalse", 2) +
-        ConditionalJump("JLT", IsTrueLabel, 2) +
-        UnconditionalJump(IsFalseLabel, 2) +
-        CloseSectionComment(1) +
-
-        OpenSectionComment("Is Greater Than", 1) +
-        WriteLabel(GreaterThanSubLabel) +
-        BinaryOperatorToD("-", "-", 2) +
-        PadLine("") + Comment("If D > 0 Then Goto IsTrue Else Goto IsFalse", 2) +
-        ConditionalJump("JGT", IsTrueLabel, 2) +
-        UnconditionalJump(IsFalseLabel, 2) +
-        CloseSectionComment(1) +
-
-        OpenSectionComment("ReusableComparison", 1) +
-
-        OpenSectionComment("Is True", 2) +
-        WriteLabel(IsTrueLabel) +
-        NegativeValueToD("1", 3) +
-        DToTopStack(3) +
-        LiftStack(3) +
-        UnconditionalJumpToAddressInMemory("R14", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("Is False", 2) +
-        WriteLabel(IsFalseLabel) +
-        ValueToD("0", 3) +
-        DToTopStack(3) +
-        LiftStack(3) +
-        UnconditionalJumpToAddressInMemory("R14", 3) +
-        CloseSectionComment(2) +
-
-        CloseSectionComment(1) +
-
-        OpenSectionComment("Return", 1) +
-        WriteLabel(ReturnSubLabel) +
-
-        OpenSectionComment("FRAME  = LCL", 2) +
-        MemoryToD("LCL", "M[Local]", 3) +
-        DToMemory("R14", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("RET = *(FRAME-5)", 2) +
-        AInstruction(5.ToString()) +
-        PadLine("A=D-A") + Comment("FRAME - 5 => A", 3) +
-        PadLine("D=M") + Comment("M[FRAME - 5] => D", 3) +
-        DToMemory("R15", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("*ARG = pop()", 2) +
-        WritePop(string.Empty, SegmentType.Argument, 0, 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("SP = ARG + 1", 2) +
-        AInstruction("ARG") +
-        PadLine("D=M+1") + Comment("M[Argument] + 1 => D", 3) +
-        DToMemory("SP", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("That = *(FRAME-1)", 2) +
-        OffsetMemoryToD("R14", "FRAME", -1, 3) +
-        DToMemory("THAT", 3) +
-        CommentLine("That = M[FRAME-1]", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("This = *(FRAME-2)", 2) +
-        OffsetMemoryToD("R14", "FRAME", -2, 3) +
-        DToMemory("THIS", 3) +
-        CommentLine("This = M[FRAME-2]", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("Argument = *(FRAME-3)", 2) +
-        OffsetMemoryToD("R14", "FRAME", -3, 3) +
-        DToMemory("ARG", 3) +
-        CommentLine("Argument = M[FRAME-3]", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("Local = *(FRAME-4)", 2) +
-        OffsetMemoryToD("R14", "FRAME", -4, 3) +
-        DToMemory("LCL", 3) +
-        CommentLine("Local = M[FRAME-4]", 3) +
-        CloseSectionComment(2) +
-
-        OpenSectionComment("goto RET", 2) +
-        AInstruction("R15") +
-        PadLine("A=M") + Comment("M[RET] => A", 3) +
-        PadLine("0;JMP") + Comment("goto RET", 3) +
-        CloseSectionComment(2) +
-
-        CloseSectionComment(1) +
-
-        OpenSectionComment("Call Function", 1) +
-        WriteLabel(CallSubLabel) +
-        PushD(2) +
-        AInstruction("LCL") +
-        PadLine("D=M") + Comment("M[LCL] => D ", 2) +
-        PushD(2) +
-        AInstruction("ARG") +
-        PadLine("D=M") + Comment("M[ARG] => D ", 2) +
-        PushD(2) +
-        AInstruction("THIS") +
-        PadLine("D=M") + Comment("M[THIS] => D ", 2) +
-        PushD(2) +
-        AInstruction("THAT") +
-        PadLine("D=M") + Comment("M[THAT] => D ", 2) +
-        PushD(2) +
-        AInstruction("R15") +
-        PadLine("D=M") + Comment("M[R15] => D ", 2) +
-        AInstruction("5") +
-        PadLine("D=D+A") + Comment("D = #arguments + 5", 2) +
-        AInstruction("SP") +
-        PadLine("D=M-D") + Comment("D = SP - #arguments - 5", 2) +
-        DToMemory("ARG", 2) +
-        AInstruction("SP") +
-        PadLine("D=M") + Comment("M[SP] => D ", 2) +
-        DToMemory("LCL", 2) +
-        OpenSectionComment("Goto function address", 2) +
-        UnconditionalJumpToAddressInMemory("R14", 3) +
-        CloseSectionComment(2) +
-        CloseSectionComment(1) +
-
-        WriteLabel(SkipSubsLabel) +
-        CloseSectionComment(0) +
-
-        SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0) +
-
-        WriteFunctionCall("Sys.init", 0) +
-        WriteLabel("END") +
-        UnconditionalJump("END", 0);
+    private static IEnumerable<IAsmOutput> WriteHeader() =>
+        new IAsmOutput[]
+        {
+            new AsmCodeSection("Reusable Sub Routines", new IAsmOutput[]
+            {
+                new AsmCodeLine(UnconditionalJump(SkipSubsLabel, 1)),
+                new AsmCodeSection("Equals",
+                    new[]
+                    {
+                        new AsmCodeLine(WriteLabel(EqualsSubLabel)),
+                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        new AsmCodeLine(string.Empty, "If D = 0 Then Goto IsTrue Else Goto IsFalse"),
+                        new AsmCodeLine(ConditionalJump("JEQ", IsTrueLabel, 2)),
+                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                    }),
+                new AsmCodeSection("Is Less Than",
+                    new[]
+                    {
+                        new AsmCodeLine(WriteLabel(LessThanSubLabel)),
+                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        new AsmCodeLine(string.Empty, "If D < 0 Then Goto IsTrue Else Goto IsFalse"),
+                        new AsmCodeLine(ConditionalJump("JLT", IsTrueLabel, 2)),
+                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                    }),
+                new AsmCodeSection("Is Greater Than",
+                    new[]
+                    {
+                        new AsmCodeLine(WriteLabel(GreaterThanSubLabel)),
+                        new AsmCodeLine(BinaryOperatorToD("-", "-", 2)),
+                        new AsmCodeLine(string.Empty, "If D > 0 Then Goto IsTrue Else Goto IsFalse"),
+                        new AsmCodeLine(ConditionalJump("JGT", IsTrueLabel, 2)),
+                        new AsmCodeLine(UnconditionalJump(IsFalseLabel, 2))
+                    }),
+                new AsmCodeSection("ReusableComparison",
+                    new[]
+                    {
+                        new AsmCodeSection("Is True", new[]
+                        {
+                            new AsmCodeLine(WriteLabel(IsTrueLabel)),
+                            new AsmCodeLine(NegativeValueToD("1", 3)),
+                            new AsmCodeLine(DToTopStack(3)),
+                            new AsmCodeLine(LiftStack(3)),
+                            new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
+                        }),
+                        new AsmCodeSection("Is False", new[]
+                        {
+                            new AsmCodeLine(WriteLabel(IsFalseLabel)),
+                            new AsmCodeLine(ValueToD("0", 3)),
+                            new AsmCodeLine(DToTopStack(3)),
+                            new AsmCodeLine(LiftStack(3)),
+                            new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
+                        })
+                    }),
+                new AsmCodeSection("Return",
+                    new IAsmOutput[]
+                    {
+                        new AsmCodeLine(WriteLabel(ReturnSubLabel)),
+                        new AsmCodeSection("FRAME  = LCL", new[]
+                        {
+                            new AsmCodeLine(MemoryToD("LCL", "M[Local]", 3)),
+                            new AsmCodeLine(DToMemory("R14", 3))
+                        }),
+                        new AsmCodeSection("RET = *(FRAME-5)", new[]
+                        {
+                            new AsmCodeLine(AInstruction(5.ToString())),
+                            new AsmCodeLine("A=D-A", "FRAME - 5 => A"),
+                            new AsmCodeLine("D=M", "M[FRAME - 5] => D"),
+                            new AsmCodeLine(DToMemory("R15", 3))
+                        }),
+                        new AsmCodeSection("*ARG = pop()", new[]
+                        {
+                            new AsmCodeLine(WritePop(string.Empty, SegmentType.Argument, 0, 3))
+                        }),
+                        new AsmCodeSection("SP = ARG + 1", new[]
+                        {
+                            new AsmCodeLine(AInstruction("ARG")),
+                            new AsmCodeLine("D=M+1", "M[Argument] + 1 => D"),
+                            new AsmCodeLine(DToMemory("SP", 3))
+                        }),
+                        new AsmCodeSection("That = *(FRAME-1)", new[]
+                        {
+                            new AsmCodeLine(OffsetMemoryToD("R14", "FRAME", -1, 3)),
+                            new AsmCodeLine(DToMemory("THAT", 3)),
+                            new AsmCodeLine(string.Empty, "That = M[FRAME-1]")
+                        }),
+                        new AsmCodeSection("This = *(FRAME-2)", new[]
+                        {
+                            new AsmCodeLine(OffsetMemoryToD("R14", "FRAME", -2, 3)),
+                            new AsmCodeLine(DToMemory("THIS", 3)),
+                            new AsmCodeLine(string.Empty, "This = M[FRAME-2]")
+                        }),
+                        new AsmCodeSection("Argument = *(FRAME-3)", new[]
+                        {
+                            new AsmCodeLine(OffsetMemoryToD("R14", "FRAME", -3, 3)),
+                            new AsmCodeLine(DToMemory("ARG", 3)),
+                            new AsmCodeLine(string.Empty, "Argument = M[FRAME-3]")
+                        }),
+                        new AsmCodeSection("Local = *(FRAME-4)", new[]
+                        {
+                            new AsmCodeLine(OffsetMemoryToD("R14", "FRAME", -4, 3)),
+                            new AsmCodeLine(DToMemory("LCL", 3)),
+                            new AsmCodeLine(string.Empty, "Local = M[FRAME-4]")
+                        }),
+                        new AsmCodeSection("goto RET", new[]
+                        {
+                            new AsmCodeLine(AInstruction("R15")),
+                            new AsmCodeLine("A=M", "M[RET] => A"),
+                            new AsmCodeLine("0;JMP", "goto RET")
+                        })
+                    }),
+                new AsmCodeSection("Call Function",
+                    new IAsmOutput[]
+                    {
+                        new AsmCodeLine(WriteLabel(CallSubLabel)),
+                        new AsmCodeLine(PushD(2)),
+                        new AsmCodeLine(AInstruction("LCL")),
+                        new AsmCodeLine("D=M", "M[LCL] => D "),
+                        new AsmCodeLine(PushD(2)),
+                        new AsmCodeLine(AInstruction("ARG")),
+                        new AsmCodeLine("D=M", "M[ARG] => D "),
+                        new AsmCodeLine(PushD(2)),
+                        new AsmCodeLine(AInstruction("THIS")),
+                        new AsmCodeLine("D=M", "M[THIS] => D "),
+                        new AsmCodeLine(PushD(2)),
+                        new AsmCodeLine(AInstruction("THAT")),
+                        new AsmCodeLine("D=M", "M[THAT] => D "),
+                        new AsmCodeLine(PushD(2)),
+                        new AsmCodeLine(AInstruction("R15")),
+                        new AsmCodeLine("D=M", "M[R15] => D "),
+                        new AsmCodeLine(AInstruction("5")),
+                        new AsmCodeLine("D=D+A", "D = #arguments + 5"),
+                        new AsmCodeLine(AInstruction("SP")),
+                        new AsmCodeLine("D=M-D", "D = SP - #arguments - 5"),
+                        new AsmCodeLine(DToMemory("ARG", 2)),
+                        new AsmCodeLine(AInstruction("SP")),
+                        new AsmCodeLine("D=M", "M[SP] => D "),
+                        new AsmCodeLine(DToMemory("LCL", 2)),
+                        new AsmCodeSection("Goto function address",
+                            new[]
+                            {
+                                new AsmCodeLine(UnconditionalJumpToAddressInMemory("R14", 3))
+                            })
+                    }),
+                new AsmCodeLine(WriteLabel(SkipSubsLabel))
+            }),
+            new AsmCodeLine(SetMemoryToValue(StackPointerAddress, BaseStackAddress.ToString(), 0)),
+            new AsmCodeLine(WriteFunctionCall("Sys.init", 0)),
+            new AsmCodeLine(WriteLabel("END")),
+            new AsmCodeLine(UnconditionalJump("END", 0))
+        };
     
     private static string WritePush(string className, SegmentType segment, uint index)
     {

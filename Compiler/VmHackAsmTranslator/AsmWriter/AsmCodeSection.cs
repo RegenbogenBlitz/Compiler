@@ -2,10 +2,10 @@ namespace VmHackAsmTranslator.AsmWriter;
 
 public class AsmCodeSection : AsmCode, IAsmOutput
 {
-    private readonly string? _sectionComment;
+    private readonly string _sectionComment;
     private readonly IEnumerable<IAsmOutput> _asmOutputs;
 
-    public AsmCodeSection(IEnumerable<IAsmOutput> asmOutputs, string? sectionComment = null)
+     public AsmCodeSection(string sectionComment, IEnumerable<IAsmOutput> asmOutputs)
     {
         _sectionComment = sectionComment;
         _asmOutputs = asmOutputs;
@@ -16,7 +16,7 @@ public class AsmCodeSection : AsmCode, IAsmOutput
             ? _asmOutputs.SelectMany(ao => ao.WriteWithComments(indentation + 1))
             : new[]
                 {
-                    OpenSectionComment(_sectionComment, indentation),
+                    OpenSectionComment(_sectionComment, indentation)
                 }.Concat(_asmOutputs.SelectMany(ao => ao.WriteWithComments(indentation + 1)))
                 .Concat(new[] { CloseSectionComment(indentation) });
 

@@ -7,7 +7,7 @@ public class AsmCodeLine : AsmCode, IAsmOutput
 
     public AsmCodeLine(string code, string? comment = null)
     {
-        _code = code;
+        _code = code.TrimEnd();
         _comment = comment;
     }
 
@@ -20,5 +20,8 @@ public class AsmCodeLine : AsmCode, IAsmOutput
                 : Comment(_comment, indentation))
         };
 
-    public IEnumerable<string> WriteWithoutComments() => new[] { _code };
+    public IEnumerable<string> WriteWithoutComments() =>
+        string.IsNullOrWhiteSpace(_code)
+            ? Array.Empty<string>()
+            : new[] { _code };
 }
