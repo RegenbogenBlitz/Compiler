@@ -18,7 +18,7 @@ try
 {
     var directory = new DirectoryInfo(folderParent);
     var vmCode = new VmCodeParser().Parse(inputFilesContent);
-    var outputFileInfo = AsmWriter.Write(directory.Name, vmCode);
+    var outputFileInfo = AsmWriter.Write(directory.Name, vmCode, true);
 
     OutputFileHandler.WriteOutputFileContent(
         folderParent,

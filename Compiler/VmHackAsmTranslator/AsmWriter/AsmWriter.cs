@@ -31,7 +31,7 @@ public static class AsmWriter
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static int _functionReturnLabelNum = 0;
         
-    public static OutputFileInfo Write(string outputFileName, VmCode vmCode)
+    public static OutputFileInfo Write(string outputFileName, VmCode vmCode, bool writeWithComments)
     {
         var output = WriteHeader();
 
@@ -132,6 +132,13 @@ public static class AsmWriter
                     throw new InvalidOperationException("Should not be reachable");
             }
         }
+
+        var asmCodeSection = new AsmCodeSection(new[] { new AsmCodeLine(output) });
+        var outputLines = 
+            writeWithComments 
+                ? asmCodeSection.WriteWithComments(0)
+                : asmCodeSection.WriteWithoutComments();
+        output = string.Join(Environment.NewLine, outputLines);
         
         return new OutputFileInfo(outputFileName, "asm", output);
     }
