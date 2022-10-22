@@ -40,7 +40,7 @@ public static class AsmWriter
             switch (command)
             {
                 case PushCommand pushCommand:
-                    asmOutputs.Add(new AsmCodeLine(WritePush(pushCommand.ClassName, pushCommand.Segment, pushCommand.Index)));
+                    asmOutputs.Add(WritePush(pushCommand.ClassName, pushCommand.Segment, pushCommand.Index));
                     break;
 
                 case PopCommand popCommand:
@@ -292,69 +292,77 @@ public static class AsmWriter
             new AsmCodeLine(UnconditionalJump("END", 0))
         };
     
-    private static string WritePush(string className, SegmentType segment, uint index)
+    private static AsmCodeSection WritePush(string className, SegmentType segment, uint index)
     {
         switch (segment)
         {
             case SegmentType.Argument:
-                return
-                    OpenSectionComment($"Push M[M[Argument] + {index}]", 0) +
-                    IndirectMemoryToD("ARG", index, "Argument", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[M[Argument] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(IndirectMemoryToD("ARG", index, "Argument", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.Local:
-                return
-                    OpenSectionComment($"Push M[M[Local] + {index}]", 0) +
-                    IndirectMemoryToD("LCL", index, "Local", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[M[Local] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(IndirectMemoryToD("LCL", index, "Local", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.Static:
-                return
-                    OpenSectionComment($"Push M[Static {index}]", 0) +
-                    MemoryToD($"{className}.{index}", $"M[M[Static {index}]]", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[Static {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(MemoryToD($"{className}.{index}", $"M[M[Static {index}]]", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.Constant:
-                return
-                    OpenSectionComment($"Push Constant '{index}'", 0) +
-                    ValueToD(index.ToString(), 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push Constant '{index}'",
+                    new[]
+                    {
+                        new AsmCodeLine(ValueToD(index.ToString(), 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.This:
-                return
-                    OpenSectionComment($"Push M[M[This] + {index}]", 0) +
-                    IndirectMemoryToD("THIS", index, "This", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[M[This] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(IndirectMemoryToD("THIS", index, "This", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.That:
-                return
-                    OpenSectionComment($"Push M[M[That] + {index}]", 0) +
-                    IndirectMemoryToD("THAT", index, "That", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[M[That] + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(IndirectMemoryToD("THAT", index, "That", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.Pointer:
                 var pointerAddress = BasePointerAddress + index;
                 
-                return
-                    OpenSectionComment($"Push M[pointer + {index}]", 0) +
-                    MemoryToD(pointerAddress.ToString(), $"pointer + {index}", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[pointer + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(MemoryToD(pointerAddress.ToString(), $"pointer + {index}", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             case SegmentType.Temp:
                 var tempAddress = BaseTempAddress + index;
                 
-                return
-                    OpenSectionComment($"Push M[temp + {index}]", 0) +
-                    MemoryToD(tempAddress.ToString(), $"temp + {index}", 1) +
-                    PushD(1) +
-                    CloseSectionComment(0);
+                return new AsmCodeSection($"Push M[temp + {index}]",
+                    new[]
+                    {
+                        new AsmCodeLine(MemoryToD(tempAddress.ToString(), $"temp + {index}", 1)),
+                        new AsmCodeLine(PushD(1))
+                    });
             
             default:
                 throw new InvalidOperationException("Should not be reachable");
